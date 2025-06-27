@@ -278,45 +278,94 @@ class ReportGenerator:
         }}
         
         .risk-gauge {{
-            width: 300px;
-            height: 150px;
-            margin: 0 auto;
+            width: 280px;
+            height: 140px;
+            margin: 20px auto;
             position: relative;
             z-index: 1;
         }}
         
-        .gauge-bg {{
-            width: 300px;
-            height: 150px;
-            border: 12px solid #e9ecef;
-            border-bottom: none;
-            border-radius: 150px 150px 0 0;
+        .gauge-container {{
             position: relative;
-            background: linear-gradient(90deg, #27ae60 0%, #f39c12 50%, #e74c3c 100%);
-            background-clip: border-box;
+            width: 280px;
+            height: 140px;
         }}
         
-        .gauge-fill {{
-            width: 300px;
-            height: 150px;
-            border: 12px solid {risk_style['color']};
+        .gauge-bg {{
+            width: 280px;
+            height: 140px;
+            border: 8px solid #f0f0f0;
             border-bottom: none;
-            border-radius: 150px 150px 0 0;
+            border-radius: 140px 140px 0 0;
+            position: absolute;
+            background: transparent;
+        }}
+        
+        .gauge-track {{
+            width: 280px;
+            height: 140px;
+            position: absolute;
+            border-radius: 140px 140px 0 0;
+            overflow: hidden;
+        }}
+        
+        .gauge-track::before {{
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
-            clip: rect(0, {risk_percentage * 3}px, 150px, 0);
-            filter: drop-shadow(0 0 10px {risk_style['color']});
+            width: 100%;
+            height: 100%;
+            background: conic-gradient(from 180deg, #27ae60 0deg, #f39c12 90deg, #e74c3c 180deg);
+            border-radius: 140px 140px 0 0;
+            opacity: 0.3;
+        }}
+        
+        .gauge-fill {{
+            width: 280px;
+            height: 140px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-radius: 140px 140px 0 0;
+            overflow: hidden;
+        }}
+        
+        .gauge-fill::after {{
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 120px;
+            background: {risk_style['color']};
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate({-90 + (risk_percentage * 1.8)}deg);
+            border-radius: 2px;
+            box-shadow: 0 0 10px {risk_style['color']};
+        }}
+        
+        .gauge-center {{
+            position: absolute;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background: {risk_style['color']};
+            border-radius: 50%;
+            box-shadow: 0 0 8px {risk_style['color']};
         }}
         
         .gauge-text {{
             position: absolute;
-            top: 110px;
+            top: 100px;
             left: 50%;
             transform: translateX(-50%);
             font-weight: bold;
-            font-size: 1.5em;
+            font-size: 1.2em;
             color: {risk_style['color']};
+            text-align: center;
         }}
         
         .executive-summary {{
@@ -642,9 +691,13 @@ class ReportGenerator:
             </div>
             <div class="risk-score">Risk Score: {assessment.risk_score} / {max_score}</div>
             <div class="risk-gauge">
-                <div class="gauge-bg"></div>
-                <div class="gauge-fill"></div>
-                <div class="gauge-text">{risk_percentage:.0f}%</div>
+                <div class="gauge-container">
+                    <div class="gauge-track"></div>
+                    <div class="gauge-bg"></div>
+                    <div class="gauge-fill"></div>
+                    <div class="gauge-center"></div>
+                    <div class="gauge-text">{risk_percentage:.0f}%</div>
+                </div>
             </div>
         </div>
         
