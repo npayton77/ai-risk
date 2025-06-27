@@ -1,0 +1,107 @@
+questions:
+  autonomy:
+    title: "🎯 Autonomy Level: How much decision-making power does the AI have?"
+    help_text: "Consider who makes the final decisions in your workflow"
+    required: true
+    options:
+      tool:
+        title: "Tool"
+        description: "AI provides recommendations only - humans always decide"
+      assistant:
+        title: "Assistant" 
+        description: "AI executes tasks with human approval - humans approve each action"
+      agent:
+        title: "Agent"
+        description: "AI acts independently within defined boundaries - humans monitor"
+      autonomous:
+        title: "Autonomous"
+        description: "AI manages entire workflows without oversight - humans only audit periodically"
+    reasoning_prompt: "Why did you choose this level? (Optional)"
+
+  oversight:
+    title: "🔍 Human Oversight: What level of human involvement exists in the process?"
+    help_text: "Consider when and how humans can intervene in the AI process"
+    required: true
+    options:
+      continuous:
+        title: "Continuous"
+        description: "Human involved in every step/decision - before every AI action"
+      checkpoint:
+        title: "Checkpoint"
+        description: "Human reviews at defined intervals - at milestones or batches"
+      exception:
+        title: "Exception"
+        description: "Human intervention only for edge cases - when AI confidence is low"
+      minimal:
+        title: "Minimal"
+        description: "Periodic auditing and monitoring only - monthly reports, annual audits"
+    reasoning_prompt: "Why did you choose this level? (Optional)"
+
+  impact:
+    title: "📊 Output Impact: What is the consequence level of AI decisions/outputs?"
+    help_text: "Think about the worst-case scenario if AI makes a mistake"
+    required: true
+    options:
+      informational:
+        title: "Informational"
+        description: "Data/insights only - reports, analysis (embarrassing but fixable)"
+      operational:
+        title: "Operational"
+        description: "Affects daily operations - scheduling, routing (disrupts business but contained)"
+      strategic:
+        title: "Strategic"
+        description: "Business-critical decisions - investments, hiring (major business impact)"
+      external:
+        title: "External"
+        description: "Customer/regulatory impact - patient care, financial transactions (affects public/regulators)"
+    reasoning_prompt: "Why did you choose this level? (Optional)"
+
+  orchestration:
+    title: "🔧 Orchestration: How are AI agents coordinated in this workflow?"
+    help_text: "Consider the AI architecture and how multiple systems interact"
+    required: true
+    options:
+      single:
+        title: "Single"
+        description: "One AI system operating independently - just one AI doing one job"
+      sequential:
+        title: "Sequential"
+        description: "Chain of AI tasks in defined order - like LangChain (AI A → AI B → AI C)"
+      parallel:
+        title: "Parallel"
+        description: "Multiple AI systems working simultaneously - like AutoGen collaboration"
+      hierarchical:
+        title: "Hierarchical"
+        description: "AI systems managing other AI systems - Master AI controlling worker AIs"
+    reasoning_prompt: "Why did you choose this type? (Optional)"
+
+  data_sensitivity:
+    title: "🔒 Data Sensitivity: What type of data does the AI process?"
+    help_text: "Consider the most sensitive data the AI will have access to"
+    required: true
+    options:
+      public:
+        title: "Public"
+        description: "Publicly available information - open datasets, published reports"
+      internal:
+        title: "Internal"
+        description: "Company internal data - employee records, business metrics"
+      confidential:
+        title: "Confidential"
+        description: "Sensitive business data - financial records, strategic plans"
+      regulated:
+        title: "Highly Confidential"
+        description: "Legally protected data - PII, financial transactions"
+    reasoning_prompt: "What's the most sensitive data involved? (Optional)"
+
+basic_fields:
+  workflow_name:
+    label: "Workflow/System Name"
+    type: "text"
+    required: true
+    placeholder: ""
+  assessor:
+    label: "Assessor Name"
+    type: "text"
+    required: true
+    placeholder: "" 
