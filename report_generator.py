@@ -80,12 +80,12 @@ class ReportGenerator:
                 individual_style = self.risk_styling.get(individual_risk, self.risk_styling['medium'])
                 
                 dimension_cards += f'''
-                    <div class="dimension-card">
-                        <div class="dimension-header">
-                            <div class="dimension-title">{self.get_dimension_title(dimension)}</div>
-                            <div class="dimension-score" style="color: {individual_style['color']};">{score}/4</div>
-                        </div>
-                        <div class="dimension-value" style="color: {individual_style['color']};">{value.upper()}</div>
+                                <div class="dimension-card">
+                <div class="dimension-header">
+                    <div class="dimension-title">{self.get_dimension_title(dimension)}</div>
+                    <div class="dimension-score" style="background: {individual_style['color']};">{score}/4</div>
+                </div>
+                <div class="dimension-value" style="color: {individual_style['color']};">{value.upper()}</div>
                         <div class="dimension-description">
                             {self.get_dimension_description(dimension, value)}
                         </div>
@@ -340,7 +340,7 @@ class ReportGenerator:
             height: 120px;
             background: {risk_style['color']};
             transform-origin: bottom center;
-            transform: translate(-50%, -100%) rotate({-90 + (risk_percentage * 1.8)}deg);
+            transform: translate(-50%, -100%) rotate({-90 + (risk_percentage * 180 / 100)}deg);
             border-radius: 2px;
             box-shadow: 0 0 10px {risk_style['color']};
         }}
@@ -470,7 +470,6 @@ class ReportGenerator:
         }}
         
         .dimension-score {{
-            background: {risk_style['color']};
             color: white;
             padding: 8px 16px;
             border-radius: 20px;
@@ -686,7 +685,7 @@ class ReportGenerator:
         <!-- Risk Overview -->
         <div class="risk-overview">
             <div class="risk-badge">
-                <span class="risk-emoji">{risk_style['emoji']}</span>
+
                 <span class="risk-level">{assessment.overall_risk} Risk</span>
             </div>
             <div class="risk-score">Risk Score: {assessment.risk_score} / {max_score}</div>

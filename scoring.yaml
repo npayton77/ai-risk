@@ -106,22 +106,22 @@ risk_styling:
     color: "#27ae60"
     bg: "#e6f3e6"
     border: "#27ae60"
-    emoji: "🟢"
+    emoji: "LOW"
   
   medium:
     color: "#f39c12"
     bg: "#fff3cd"
     border: "#f39c12"
-    emoji: "🟡"
+    emoji: "MED"
   
   high:
     color: "#e74c3c"
     bg: "#f8d7da"
     border: "#e74c3c"
-    emoji: "🔴"
+    emoji: "HIGH"
   
   critical:
     color: "#8e44ad"
     bg: "#e2e3f3"
     border: "#8e44ad"
-    emoji: "🟣" 
+    emoji: "CRIT" 
