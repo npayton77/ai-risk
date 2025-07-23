@@ -1,6 +1,8 @@
 source .venv/bin/activate
 
 
+venv\Scripts\activate
+
 First time creating virtual environment:
 
 MacOS:

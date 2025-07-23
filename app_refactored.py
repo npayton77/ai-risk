@@ -4,7 +4,7 @@ AI Risk Assessment Web Application - Refactored Version
 Web frontend for the AI risk assessment tool using YAML configuration
 """
 
-from flask import Flask, render_template_string, request, jsonify, send_file, redirect, url_for
+from flask import Flask, render_template_string, request, jsonify, send_file, redirect, url_for, Response
 import json
 import os
 import yaml
@@ -14,6 +14,8 @@ from typing import Dict, List, Tuple
 import tempfile
 from template_generator import TemplateGenerator
 from report_generator import ReportGenerator
+from pdf_generator import PDFGenerator
+from email_sender import EmailSender
 
 # Import the risk assessment logic
 @dataclass
@@ -34,10 +36,10 @@ class RiskAssessment:
 class AIRiskAssessor:
     def __init__(self, scoring_file: str = 'scoring.yaml', questions_file: str = 'questions.yaml'):
         """Initialize with YAML configuration files"""
-        with open(scoring_file, 'r') as f:
+        with open(scoring_file, 'r', encoding='utf-8') as f:
             self.scoring_config = yaml.safe_load(f)
         
-        with open(questions_file, 'r') as f:
+        with open(questions_file, 'r', encoding='utf-8') as f:
             self.questions_config = yaml.safe_load(f)
         
         # Extract scoring data from YAML
@@ -106,359 +108,22 @@ class AIRiskAssessor:
         if dimension in questions and value in questions[dimension]['options']:
             return questions[dimension]['options'][value]['description']
         return 'Unknown'
-
-    def generate_html_report(self, assessment: RiskAssessment) -> str:
-        """Generate HTML report for the assessment using YAML styling configuration"""
-        risk_style = self.risk_styling.get(assessment.overall_risk, self.risk_styling['medium'])
-        # Calculate max possible score dynamically based on dimensions
-        max_score = len(self.dimension_scores) * 4  # 4 is max score per dimension
-        risk_percentage = (assessment.risk_score / max_score) * 100
-        
-        html_content = f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Risk Assessment Report - {assessment.workflow_name}</title>
-    <style>
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }}
-        
-        .container {{
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }}
-        
-        .header {{
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }}
-        
-        .header h1 {{
-            margin: 0 0 10px 0;
-            font-size: 2.2em;
-            font-weight: 300;
-        }}
-        
-        .header .subtitle {{
-            font-size: 1.1em;
-            opacity: 0.9;
-        }}
-        
-        .content {{
-            padding: 30px;
-        }}
-        
-        .assessment-meta {{
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }}
-        
-        .meta-item {{
-            text-align: center;
-        }}
-        
-        .meta-item .label {{
-            font-size: 0.9em;
-            color: #6c757d;
-            margin-bottom: 5px;
-        }}
-        
-        .meta-item .value {{
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #2c3e50;
-        }}
-        
-        .risk-overview {{
-            background: {risk_style['bg']};
-            border: 3px solid {risk_style['border']};
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 30px;
-            text-align: center;
-        }}
-        
-        .risk-level {{
-            font-size: 2.5em;
-            font-weight: bold;
-            color: {risk_style['color']};
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }}
-        
-        .risk-score {{
-            font-size: 1.3em;
-            color: #2c3e50;
-        }}
-        
-        .risk-gauge {{
-            width: 200px;
-            height: 100px;
-            margin: 20px auto;
-            position: relative;
-        }}
-        
-        .gauge-bg {{
-            width: 200px;
-            height: 100px;
-            border: 8px solid #e9ecef;
-            border-bottom: none;
-            border-radius: 100px 100px 0 0;
-            position: relative;
-        }}
-        
-        .gauge-fill {{
-            width: 200px;
-            height: 100px;
-            border: 8px solid {risk_style['color']};
-            border-bottom: none;
-            border-radius: 100px 100px 0 0;
-            position: absolute;
-            top: 0;
-            left: 0;
-            clip: rect(0, {risk_percentage * 2}px, 100px, 0);
-        }}
-        
-        .gauge-text {{
-            position: absolute;
-            top: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-weight: bold;
-            color: {risk_style['color']};
-        }}
-        
-        .dimensions-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }}
-        
-        .dimension-card {{
-            background: white;
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }}
-        
-        .dimension-card:hover {{
-            transform: translateY(-5px);
-        }}
-        
-        .dimension-title {{
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }}
-        
-        .dimension-value {{
-            font-size: 1.1em;
-            color: {risk_style['color']};
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-        }}
-        
-        .dimension-description {{
-            color: #6c757d;
-            font-size: 0.9em;
-        }}
-        
-        .recommendations {{
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 30px;
-        }}
-        
-        .recommendations h3 {{
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.4em;
-        }}
-        
-        .recommendation-item {{
-            background: white;
-            border-left: 4px solid {risk_style['color']};
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 0 8px 8px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        
-        .reasoning-section {{
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 25px;
-        }}
-        
-        .reasoning-section h3 {{
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.4em;
-        }}
-        
-        .reasoning-item {{
-            margin-bottom: 15px;
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        
-        .reasoning-item .question {{
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }}
-        
-        .reasoning-item .answer {{
-            color: #6c757d;
-        }}
-        
-        .footer {{
-            background: #2c3e50;
-            color: white;
-            text-align: center;
-            padding: 15px;
-            font-size: 0.9em;
-        }}
-        
-        @media print {{
-            body {{ background: white; }}
-            .container {{ box-shadow: none; }}
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>AI Risk Assessment Report</h1>
-            <div class="subtitle">{assessment.workflow_name}</div>
-        </div>
-        
-        <div class="content">
-            <div class="assessment-meta">
-                <div class="meta-item">
-                    <div class="label">Assessed By</div>
-                    <div class="value">{assessment.assessor}</div>
-                </div>
-                <div class="meta-item">
-                    <div class="label">Assessment Date</div>
-                    <div class="value">{assessment.date}</div>
-                </div>
-                <div class="meta-item">
-                    <div class="label">Workflow Type</div>
-                    <div class="value">AI {assessment.orchestration_type.title()} System</div>
-                </div>
-            </div>
-            
-            <div class="risk-overview">
-                <div class="risk-level">{assessment.overall_risk} Risk</div>
-                <div class="risk-score">Risk Score: {assessment.risk_score} / 16</div>
-                <div class="risk-gauge">
-                    <div class="gauge-bg"></div>
-                    <div class="gauge-fill"></div>
-                    <div class="gauge-text">{risk_percentage:.0f}%</div>
-                </div>
-            </div>
-            
-            <h2>Risk Assessment Dimensions</h2>
-            <div class="dimensions-grid">
-                <div class="dimension-card">
-                    <div class="dimension-title">🎯 Autonomy Level</div>
-                    <div class="dimension-value">{assessment.autonomy_level}</div>
-                    <div class="dimension-description">
-                        {self.get_dimension_description('autonomy', assessment.autonomy_level)}
-                    </div>
-                </div>
-                
-                <div class="dimension-card">
-                    <div class="dimension-title">🔍 Human Oversight</div>
-                    <div class="dimension-value">{assessment.oversight_level}</div>
-                    <div class="dimension-description">
-                        {self.get_dimension_description('oversight', assessment.oversight_level)}
-                    </div>
-                </div>
-                
-                <div class="dimension-card">
-                    <div class="dimension-title">📊 Output Impact</div>
-                    <div class="dimension-value">{assessment.impact_level}</div>
-                    <div class="dimension-description">
-                        {self.get_dimension_description('impact', assessment.impact_level)}
-                    </div>
-                </div>
-                
-                <div class="dimension-card">
-                    <div class="dimension-title">🔧 Orchestration</div>
-                    <div class="dimension-value">{assessment.orchestration_type}</div>
-                    <div class="dimension-description">
-                        {self.get_dimension_description('orchestration', assessment.orchestration_type)}
-                    </div>
-                </div>
-            </div>
-            
-            <div class="recommendations">
-                <h3>Recommended Actions</h3>
-                {"".join([f'<div class="recommendation-item">{rec}</div>' for rec in assessment.recommendations])}
-            </div>
-            
-            <div class="reasoning-section">
-                <h3>Assessment Reasoning</h3>
-                <div class="reasoning-item">
-                    <div class="question">Autonomy Level Justification:</div>
-                    <div class="answer">{assessment.responses.get('autonomy_reasoning', 'Not provided')}</div>
-                </div>
-                <div class="reasoning-item">
-                    <div class="question">Oversight Level Justification:</div>
-                    <div class="answer">{assessment.responses.get('oversight_reasoning', 'Not provided')}</div>
-                </div>
-                <div class="reasoning-item">
-                    <div class="question">Impact Level Justification:</div>
-                    <div class="answer">{assessment.responses.get('impact_reasoning', 'Not provided')}</div>
-                </div>
-                <div class="reasoning-item">
-                    <div class="question">Orchestration Type Justification:</div>
-                    <div class="answer">{assessment.responses.get('orchestration_reasoning', 'Not provided')}</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="footer">
-            Generated by AI Risk Assessment Tool | {assessment.date}
-        </div>
-    </div>
-</body>
-</html>
-        """
-        
-        return html_content
+    
+    def _get_dimension_score(self, dimension: str, value: str) -> int:
+        """Get numerical score for a dimension value"""
+        if dimension in self.dimension_scores and value in self.dimension_scores[dimension]:
+            return self.dimension_scores[dimension][value]
+        return 0
+    
+    def _get_email_risk_summary(self, risk_level: str) -> str:
+        """Get email-friendly risk summary"""
+        summaries = {
+            'low': 'This AI system presents minimal risk to your organization. Standard monitoring and review processes should be sufficient.',
+            'medium': 'This AI system presents moderate risk requiring enhanced oversight and monitoring procedures.',
+            'high': 'This AI system presents significant risk requiring comprehensive monitoring, clear escalation procedures, and dedicated oversight.',
+            'critical': 'This AI system presents critical risk requiring extensive safeguards, formal approval processes, and continuous monitoring.'
+        }
+        return summaries.get(risk_level, 'Risk level assessment unavailable.')
 
 # Flask Web Application
 app = Flask(__name__)
@@ -468,6 +133,8 @@ app.secret_key = 'your-secret-key-here'  # Change this in production
 template_generator = TemplateGenerator()
 risk_assessor = AIRiskAssessor()
 report_generator = ReportGenerator()
+pdf_generator = PDFGenerator()
+email_sender = EmailSender()
 
 @app.route('/')
 def index():
@@ -516,15 +183,15 @@ def assess_risk():
         
         # Create assessment object
         responses_dict = {
-            'autonomy_reasoning': autonomy_reasoning,
-            'oversight_reasoning': oversight_reasoning,
-            'impact_reasoning': impact_reasoning,
-            'orchestration_reasoning': orchestration_reasoning
+            'autonomy_reasoning': autonomy_reasoning or 'Not provided',
+            'oversight_reasoning': oversight_reasoning or 'Not provided',
+            'impact_reasoning': impact_reasoning or 'Not provided',
+            'orchestration_reasoning': orchestration_reasoning or 'Not provided'
         }
         
         # Add data sensitivity if it exists
         if data_sensitivity:
-            responses_dict['data_sensitivity_reasoning'] = data_sensitivity_reasoning
+            responses_dict['data_sensitivity_reasoning'] = data_sensitivity_reasoning or 'Not provided'
         
         assessment = RiskAssessment(
             workflow_name=workflow_name,
@@ -544,18 +211,6 @@ def assess_risk():
         if data_sensitivity:
             assessment.data_sensitivity_level = data_sensitivity
         
-        # Generate comprehensive HTML report
-        html_report = report_generator.generate_comprehensive_report(assessment)
-        
-        # Save to temporary file for download
-        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8')
-        temp_file.write(html_report)
-        temp_file.close()
-        
-        # Store file path in session (simplified for demo)
-        app.config['TEMP_REPORT_PATH'] = temp_file.name
-        app.config['TEMP_REPORT_NAME'] = f'ai_risk_report_{workflow_name.replace(" ", "_")}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.html'
-        
         # Store assessment in session for the report page
         session_id = f"assessment_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(assessment.workflow_name) % 10000}"
         app.config[session_id] = assessment
@@ -565,6 +220,100 @@ def assess_risk():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+def generate_complete_email_report(assessment, session_id):
+    """Generate a complete email report with all assessment details"""
+    # Get data sensitivity info if available
+    data_sensitivity_info = ""
+    if hasattr(assessment, 'data_sensitivity_level') and assessment.data_sensitivity_level:
+        ds_score = risk_assessor._get_dimension_score('data_sensitivity', assessment.data_sensitivity_level)
+        ds_desc = risk_assessor.get_dimension_description('data_sensitivity', assessment.data_sensitivity_level)
+        data_sensitivity_info = f"""
+🔒 DATA SENSITIVITY: {assessment.data_sensitivity_level.upper()} ({ds_score}/4)
+   Description: {ds_desc}"""
+    
+    # Get data sensitivity reasoning if available
+    ds_reasoning = ""
+    if 'data_sensitivity_reasoning' in assessment.responses:
+        ds_reasoning = f"""
+🔒 Data Sensitivity Reasoning:
+   {assessment.responses.get('data_sensitivity_reasoning', 'Not provided')}"""
+
+    return f"""Hi there,
+
+Please find the AI Risk Assessment Report for "{assessment.workflow_name}" below.
+
+=============================================================
+                   AI RISK ASSESSMENT REPORT                
+=============================================================
+
+Assessment Details:
+• Workflow/System: {assessment.workflow_name}
+• Assessed by: {assessment.assessor}
+• Date: {assessment.date}
+• Report ID: RA-{datetime.now().strftime('%Y%m%d')}-{hash(assessment.workflow_name) % 10000}
+
+=============================================================
+                        RISK OVERVIEW                      
+=============================================================
+
+🎯 RISK LEVEL: {assessment.overall_risk.upper()} RISK
+📊 Risk Score: {assessment.risk_score}/20 ({int((assessment.risk_score/20)*100)}%)
+
+Risk Summary:
+{risk_assessor._get_email_risk_summary(assessment.overall_risk)}
+
+=============================================================
+                    RISK ASSESSMENT DIMENSIONS            
+=============================================================
+
+🎯 AUTONOMY LEVEL: {assessment.autonomy_level.upper()} ({risk_assessor._get_dimension_score('autonomy', assessment.autonomy_level)}/4)
+   Description: {risk_assessor.get_dimension_description('autonomy', assessment.autonomy_level)}
+
+🔍 HUMAN OVERSIGHT: {assessment.oversight_level.upper()} ({risk_assessor._get_dimension_score('oversight', assessment.oversight_level)}/4)
+   Description: {risk_assessor.get_dimension_description('oversight', assessment.oversight_level)}
+
+📊 OUTPUT IMPACT: {assessment.impact_level.upper()} ({risk_assessor._get_dimension_score('impact', assessment.impact_level)}/4)
+   Description: {risk_assessor.get_dimension_description('impact', assessment.impact_level)}
+
+🔧 ORCHESTRATION: {assessment.orchestration_type.upper()} ({risk_assessor._get_dimension_score('orchestration', assessment.orchestration_type)}/4)
+   Description: {risk_assessor.get_dimension_description('orchestration', assessment.orchestration_type)}{data_sensitivity_info}
+
+=============================================================
+                     RECOMMENDED ACTIONS                   
+=============================================================
+
+{chr(10).join([f"📋 {i+1}. {rec}" for i, rec in enumerate(assessment.recommendations)])}
+
+=============================================================
+                    ASSESSMENT REASONING                   
+=============================================================
+
+🎯 Autonomy Level Reasoning:
+   {assessment.responses.get('autonomy_reasoning', 'Not provided')}
+
+🔍 Oversight Level Reasoning:
+   {assessment.responses.get('oversight_reasoning', 'Not provided')}
+
+📊 Impact Level Reasoning:
+   {assessment.responses.get('impact_reasoning', 'Not provided')}
+
+🔧 Orchestration Type Reasoning:
+   {assessment.responses.get('orchestration_reasoning', 'Not provided')}{ds_reasoning}
+
+=============================================================
+
+📎 For the interactive version with charts and visualizations:
+   View online: http://localhost:9000/report/{session_id}
+   Download: http://localhost:9000/download_pdf/{session_id}
+
+Best regards,
+{assessment.assessor}
+
+---
+Generated by AI Risk Assessment Tool
+{datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+"""
 
 @app.route('/report/<session_id>')
 def view_report(session_id):
@@ -578,62 +327,262 @@ def view_report(session_id):
         # Generate the beautiful HTML report
         html_report = report_generator.generate_comprehensive_report(assessment)
         
-        # Add download button to the report
-        download_button = '''
-        <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
-            <a href="#" onclick="downloadReport()" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); color: white; padding: 15px 25px; border-radius: 30px; text-decoration: none; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
-                📄 Download Report
-            </a>
-        </div>
-        <script>
-        function downloadReport() {
-            // Create a downloadable version
-            const htmlContent = document.documentElement.outerHTML;
-            const blob = new Blob([htmlContent], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `ai_risk_report_''' + assessment.workflow_name.replace(' ', '_') + '''_''' + datetime.now().strftime('%Y%m%d_%H%M%S') + '''.html`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-        </script>
-        '''
+        # Add modern action buttons to the report
+        # Check if PDF generation is available
+        pdf_available = pdf_generator.weasyprint_available
+        download_label = "📄 Download PDF" if pdf_available else "📄 Download Report"
+        download_title = "Download as PDF" if pdf_available else "Download as HTML (use browser Print to PDF)"
         
-        # Insert download button before closing body tag
-        html_report = html_report.replace('</body>', download_button + '</body>')
+# No need to generate email content here - we'll fetch it via AJAX
+        
+        action_buttons = f'''
+        <div style="position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px;">
+            <button onclick="downloadPDF()" title="{download_title}" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; padding: 12px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(231,76,60,0.3); transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(231,76,60,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(231,76,60,0.3)'">
+                {download_label}
+            </button>
+            <button onclick="emailReport()" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 12px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(52,152,219,0.3); transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(52,152,219,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(52,152,219,0.3)'">
+                📧 Email Report
+            </button>
+            <button onclick="location.href='/'" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; padding: 12px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(39,174,96,0.3); transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(39,174,96,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(39,174,96,0.3)'">
+                🔄 New Assessment
+            </button>
+        </div>
+        
+        <script>
+        function downloadPDF() {{
+            window.location.href = '/download_pdf/{session_id}';
+        }}
+        
+        async function emailReport() {{
+            try {{
+                // Fetch the complete email report content
+                const response = await fetch('/email_content/{session_id}');
+                const emailContent = await response.text();
+                
+                const subject = encodeURIComponent('AI Risk Assessment Report - {assessment.workflow_name}');
+                const body = encodeURIComponent(emailContent);
+
+                const mailtoUrl = `mailto:?subject=${{subject}}&body=${{body}}`;
+                
+                // Open default mail client
+                window.location.href = mailtoUrl;
+            }} catch (error) {{
+                console.error('Error generating email content:', error);
+                alert('Error generating email content. Please try again.');
+            }}
+        }}
+        </script>'''
+        
+        # Insert action buttons before closing body tag
+        html_report = html_report.replace('</body>', action_buttons + '</body>')
         
         return html_report
         
     except Exception as e:
         return f"<html><body><h1>Error</h1><p>Failed to generate report: {str(e)}</p><a href='/'>Back to Assessment</a></body></html>"
 
-@app.route('/download_report')
-def download_report():
-    """Download the generated HTML report"""
+@app.route('/download_pdf/<session_id>')
+def download_pdf(session_id):
+    """Download the risk assessment report as PDF or fallback HTML"""
     try:
-        report_path = app.config.get('TEMP_REPORT_PATH')
-        report_name = app.config.get('TEMP_REPORT_NAME', f'ai_risk_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.html')
+        assessment = app.config.get(session_id)
+        if not assessment:
+            return jsonify({'error': 'Assessment not found'}), 404
         
-        if report_path and os.path.exists(report_path):
-            return send_file(
-                report_path,
-                as_attachment=True,
-                download_name=report_name,
-                mimetype='text/html'
-            )
+        # Generate HTML report
+        html_report = report_generator.generate_comprehensive_report(assessment)
+        
+        # Generate PDF or fallback HTML
+        content_bytes = pdf_generator.generate_pdf_report(assessment, html_report)
+        
+        # Create filename and MIME type based on availability
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = assessment.workflow_name.replace(' ', '_').replace('/', '_')
+        
+        if pdf_generator.weasyprint_available:
+            filename = f'ai_risk_report_{safe_name}_{timestamp}.pdf'
+            mimetype = 'application/pdf'
         else:
-            return jsonify({'error': 'Report not found. Please generate an assessment first.'}), 404
+            filename = f'ai_risk_report_{safe_name}_{timestamp}.html'
+            mimetype = 'text/html'
+        
+        return Response(
+            content_bytes,
+            mimetype=mimetype,
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+        
     except Exception as e:
-        return jsonify({'error': f'Download failed: {str(e)}'}), 500
+        return jsonify({'error': f'Report generation failed: {str(e)}'}), 500
+
+# Email content endpoint
+@app.route('/email_content/<session_id>')
+def get_email_content(session_id):
+    """Get the complete email report content for a specific assessment"""
+    try:
+        assessment = app.config.get(session_id)
+        if not assessment:
+            return "Assessment not found", 404
+        
+        email_content = generate_complete_email_report(assessment, session_id)
+        return email_content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+    except Exception as e:
+        return f"Error generating email content: {str(e)}", 500
 
 @app.route('/api/assessment', methods=['POST'])
 def api_assessment():
     """API endpoint for programmatic assessment"""
     return assess_risk()
+
+@app.route('/email_info')
+def email_info_page():
+    """Display information about the simplified email functionality"""
+    
+    html_content = '''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Email Functionality - AI Risk Assessment Tool</title>
+        <style>
+            body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; min-height: 100vh; }
+            .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+            h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+            .info-box { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 20px 0; }
+            .success-box { border-left: 4px solid #27ae60; background: #d4edda; }
+            .btn { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 12px 25px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin: 10px; }
+            .feature-list { list-style: none; padding: 0; }
+            .feature-item { padding: 10px; margin: 5px 0; border-radius: 8px; display: flex; align-items: center; gap: 10px; background: #e8f5e8; color: #2d5a2d; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📧 Email Functionality</h1>
+            
+            <div class="info-box success-box">
+                <h3>✅ Simple & User-Friendly Email</h3>
+                <p>Our email functionality uses your default mail client - <strong>no complex setup required!</strong></p>
+                <p>When you click "📧 Email Report", it will:</p>
+                <ul class="feature-list">
+                    <li class="feature-item">✅ Open your default mail app (Outlook, Mail, Gmail, etc.)</li>
+                    <li class="feature-item">✅ Pre-fill the subject with the assessment name</li>
+                    <li class="feature-item">✅ Include a professional email body with key findings</li>
+                    <li class="feature-item">✅ Provide links to view and download the report</li>
+                </ul>
+            </div>
+            
+            <div class="info-box">
+                <h3>How It Works</h3>
+                <p><strong>1. Generate your risk assessment report</strong></p>
+                <p><strong>2. Click "📧 Email Report"</strong> - your mail client opens automatically</p>
+                <p><strong>3. Add recipient email addresses</strong> and send!</p>
+                
+                <p><strong>What's included in the email:</strong></p>
+                <ul>
+                    <li>📊 Assessment summary (risk level, score, assessor)</li>
+                    <li>🔗 Direct link to view the report online</li>
+                    <li>📄 Link to download the report file</li>
+                    <li>📋 Top 3 key recommendations</li>
+                    <li>✉️ Professional formatting</li>
+                </ul>
+            </div>
+            
+            <div class="info-box">
+                <h3>🎯 Benefits</h3>
+                <ul>
+                    <li><strong>Zero Configuration:</strong> Works with any email client</li>
+                    <li><strong>Privacy First:</strong> No credentials or SMTP setup needed</li>
+                    <li><strong>Universal Compatibility:</strong> Works on all operating systems</li>
+                    <li><strong>Professional Output:</strong> Formatted, ready-to-send emails</li>
+                </ul>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/" class="btn">🔄 Back to Assessment Tool</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+    
+    return html_content
+
+@app.route('/system_info')
+def system_info_page():
+    """Display system information and PDF setup instructions"""
+    pdf_info = pdf_generator.get_system_requirements_info()
+    
+    html_content = f'''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>System Information - AI Risk Assessment Tool</title>
+        <style>
+            body {{ font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; min-height: 100vh; }}
+            .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }}
+            h1 {{ color: #2c3e50; text-align: center; margin-bottom: 30px; }}
+            .status-box {{ background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 20px 0; }}
+            .status-good {{ border-left: 4px solid #27ae60; background: #d4edda; }}
+            .status-warning {{ border-left: 4px solid #ffc107; background: #fff3cd; }}
+            pre {{ background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 14px; }}
+            .btn {{ background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 12px 25px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin: 10px; }}
+            .feature-list {{ list-style: none; padding: 0; }}
+            .feature-item {{ padding: 10px; margin: 5px 0; border-radius: 8px; display: flex; align-items: center; gap: 10px; }}
+            .feature-enabled {{ background: #d4edda; color: #155724; }}
+            .feature-fallback {{ background: #fff3cd; color: #856404; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔧 System Information</h1>
+            
+            <div class="status-box {'status-good' if pdf_generator.weasyprint_available else 'status-warning'}">
+                <h3>PDF Generation Status</h3>
+                <ul class="feature-list">
+                    <li class="feature-item {'feature-enabled' if pdf_generator.weasyprint_available else 'feature-fallback'}">
+                        {'✅' if pdf_generator.weasyprint_available else '⚠️'} 
+                        WeasyPrint PDF Generation: {'Enabled' if pdf_generator.weasyprint_available else 'Fallback Mode'}
+                    </li>
+                    <li class="feature-item feature-enabled">
+                        ✅ HTML Report Generation: Enabled
+                    </li>
+                                         <li class="feature-item feature-enabled">
+                         ✅ Email Functionality: Enabled (uses default mail client)
+                     </li>
+                    <li class="feature-item feature-enabled">
+                        ✅ Risk Assessment: Enabled
+                    </li>
+                </ul>
+            </div>
+            
+            {"<div class='status-box status-warning'><h3>PDF Setup Instructions</h3><pre>" + pdf_info + "</pre></div>" if not pdf_generator.weasyprint_available else ""}
+            
+            <div class="status-box">
+                <h3>Current Features</h3>
+                <p><strong>✨ Available Now:</strong></p>
+                <ul>
+                    <li>📊 Comprehensive AI Risk Assessment</li>
+                    <li>🎨 Beautiful HTML Reports</li>
+                    <li>📧 Email Report Delivery</li>
+                    <li>{'📄 PDF Generation' if pdf_generator.weasyprint_available else '📄 HTML Download (Print to PDF)'}</li>
+                    <li>🔄 Dynamic YAML Configuration</li>
+                    <li>📱 Mobile-Responsive Design</li>
+                </ul>
+            </div>
+            
+                         <div style="text-align: center; margin-top: 30px;">
+                 <a href="/" class="btn">🔄 Back to Assessment Tool</a>
+                 <a href="/email_info" class="btn">📧 Email Info</a>
+             </div>
+        </div>
+    </body>
+    </html>
+    '''
+    
+    return html_content
 
 if __name__ == '__main__':
     # Check for required files
@@ -643,9 +592,15 @@ if __name__ == '__main__':
             print(f"Error: {file} not found. Please ensure all YAML configuration files are present.")
             exit(1)
     
-    print("Starting AI Risk Assessment Web Application (Refactored)...")
+    print("Starting AI Risk Assessment Web Application (Enhanced)...")
     print("Configuration loaded from YAML files:")
     print("- questions.yaml: Questions and form structure")
     print("- scoring.yaml: Risk scoring and recommendations")
+    print("New features:")
+    print(f"{'✅' if pdf_generator.weasyprint_available else '⚠️'} PDF report generation: {'Enabled' if pdf_generator.weasyprint_available else 'Fallback mode (HTML)'}")
+    print("📧 Email report functionality (mailto: links)")
+    print("🎨 Modern UI enhancements")
     print("Open your browser and go to: http://localhost:9000")
+    print("System info: http://localhost:9000/system_info")
+    print("Email info: http://localhost:9000/email_info")
     app.run(debug=True, host='0.0.0.0', port=9000) 
