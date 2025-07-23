@@ -229,15 +229,14 @@ def generate_complete_email_report(assessment, session_id):
         ds_score = risk_assessor._get_dimension_score('data_sensitivity', assessment.data_sensitivity_level)
         ds_desc = risk_assessor.get_dimension_description('data_sensitivity', assessment.data_sensitivity_level)
         data_sensitivity_info = f"""
-🔒 DATA SENSITIVITY: {assessment.data_sensitivity_level.upper()} ({ds_score}/4)
-   Description: {ds_desc}"""
+Data Sensitivity: {assessment.data_sensitivity_level.upper()} ({ds_score}/4)
+Description: {ds_desc}"""
     
     # Get data sensitivity reasoning if available
     ds_reasoning = ""
     if 'data_sensitivity_reasoning' in assessment.responses:
         ds_reasoning = f"""
-🔒 Data Sensitivity Reasoning:
-   {assessment.responses.get('data_sensitivity_reasoning', 'Not provided')}"""
+Data Sensitivity Reasoning: {assessment.responses.get('data_sensitivity_reasoning', 'Not provided')}"""
 
     return f"""Hi there,
 
@@ -257,8 +256,8 @@ Assessment Details:
                         RISK OVERVIEW                      
 =============================================================
 
-🎯 RISK LEVEL: {assessment.overall_risk.upper()} RISK
-📊 Risk Score: {assessment.risk_score}/20 ({int((assessment.risk_score/20)*100)}%)
+RISK LEVEL: {assessment.overall_risk.upper()} RISK
+Risk Score: {assessment.risk_score}/20 ({int((assessment.risk_score/20)*100)}%)
 
 Risk Summary:
 {risk_assessor._get_email_risk_summary(assessment.overall_risk)}
@@ -267,45 +266,45 @@ Risk Summary:
                     RISK ASSESSMENT DIMENSIONS            
 =============================================================
 
-🎯 AUTONOMY LEVEL: {assessment.autonomy_level.upper()} ({risk_assessor._get_dimension_score('autonomy', assessment.autonomy_level)}/4)
-   Description: {risk_assessor.get_dimension_description('autonomy', assessment.autonomy_level)}
+AUTONOMY LEVEL: {assessment.autonomy_level.upper()} ({risk_assessor._get_dimension_score('autonomy', assessment.autonomy_level)}/4)
+Description: {risk_assessor.get_dimension_description('autonomy', assessment.autonomy_level)}
 
-🔍 HUMAN OVERSIGHT: {assessment.oversight_level.upper()} ({risk_assessor._get_dimension_score('oversight', assessment.oversight_level)}/4)
-   Description: {risk_assessor.get_dimension_description('oversight', assessment.oversight_level)}
+HUMAN OVERSIGHT: {assessment.oversight_level.upper()} ({risk_assessor._get_dimension_score('oversight', assessment.oversight_level)}/4)
+Description: {risk_assessor.get_dimension_description('oversight', assessment.oversight_level)}
 
-📊 OUTPUT IMPACT: {assessment.impact_level.upper()} ({risk_assessor._get_dimension_score('impact', assessment.impact_level)}/4)
-   Description: {risk_assessor.get_dimension_description('impact', assessment.impact_level)}
+OUTPUT IMPACT: {assessment.impact_level.upper()} ({risk_assessor._get_dimension_score('impact', assessment.impact_level)}/4)
+Description: {risk_assessor.get_dimension_description('impact', assessment.impact_level)}
 
-🔧 ORCHESTRATION: {assessment.orchestration_type.upper()} ({risk_assessor._get_dimension_score('orchestration', assessment.orchestration_type)}/4)
-   Description: {risk_assessor.get_dimension_description('orchestration', assessment.orchestration_type)}{data_sensitivity_info}
+ORCHESTRATION: {assessment.orchestration_type.upper()} ({risk_assessor._get_dimension_score('orchestration', assessment.orchestration_type)}/4)
+Description: {risk_assessor.get_dimension_description('orchestration', assessment.orchestration_type)}{data_sensitivity_info}
 
 =============================================================
                      RECOMMENDED ACTIONS                   
 =============================================================
 
-{chr(10).join([f"📋 {i+1}. {rec}" for i, rec in enumerate(assessment.recommendations)])}
+{chr(10).join([f"{i+1}. {rec}" for i, rec in enumerate(assessment.recommendations)])}
 
 =============================================================
                     ASSESSMENT REASONING                   
 =============================================================
 
-🎯 Autonomy Level Reasoning:
-   {assessment.responses.get('autonomy_reasoning', 'Not provided')}
+Autonomy Level Reasoning:
+{assessment.responses.get('autonomy_reasoning', 'Not provided')}
 
-🔍 Oversight Level Reasoning:
-   {assessment.responses.get('oversight_reasoning', 'Not provided')}
+Oversight Level Reasoning:
+{assessment.responses.get('oversight_reasoning', 'Not provided')}
 
-📊 Impact Level Reasoning:
-   {assessment.responses.get('impact_reasoning', 'Not provided')}
+Impact Level Reasoning:
+{assessment.responses.get('impact_reasoning', 'Not provided')}
 
-🔧 Orchestration Type Reasoning:
-   {assessment.responses.get('orchestration_reasoning', 'Not provided')}{ds_reasoning}
+Orchestration Type Reasoning:
+{assessment.responses.get('orchestration_reasoning', 'Not provided')}{ds_reasoning}
 
 =============================================================
 
-📎 For the interactive version with charts and visualizations:
-   View online: http://localhost:9000/report/{session_id}
-   Download: http://localhost:9000/download_pdf/{session_id}
+For the interactive version with charts and visualizations:
+View online: http://localhost:9000/report/{session_id}
+Download: http://localhost:9000/download_pdf/{session_id}
 
 Best regards,
 {assessment.assessor}
@@ -313,6 +312,37 @@ Best regards,
 ---
 Generated by AI Risk Assessment Tool
 {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+"""
+
+def generate_short_email_report(assessment, session_id):
+    """Generate a short, email-friendly report for mailto: links"""
+    risk_summary = risk_assessor._get_email_risk_summary(assessment.overall_risk)
+    
+    # Keep it short and sweet for email compatibility
+    return f"""Hi there,
+
+AI Risk Assessment Report for "{assessment.workflow_name}"
+
+RISK LEVEL: {assessment.overall_risk.upper()} ({assessment.risk_score}/20 - {int((assessment.risk_score/20)*100)}%)
+
+{risk_summary}
+
+TOP RECOMMENDATIONS:
+{chr(10).join([f"{i+1}. {rec[:100]}{'...' if len(rec) > 100 else ''}" for i, rec in enumerate(assessment.recommendations[:3])])}
+
+ASSESSMENT DETAILS:
+- Assessed by: {assessment.assessor}
+- Date: {assessment.date}
+- Report ID: RA-{datetime.now().strftime('%Y%m%d')}-{hash(assessment.workflow_name) % 10000}
+
+View full interactive report: http://localhost:9000/report/{session_id}
+Download complete report: http://localhost:9000/download_pdf/{session_id}
+Download HTML for email attachment: http://localhost:9000/download_html/{session_id}
+
+Best regards,
+{assessment.assessor}
+
+Generated by AI Risk Assessment Tool
 """
 
 @app.route('/report/<session_id>')
@@ -333,16 +363,31 @@ def view_report(session_id):
         download_label = "📄 Download PDF" if pdf_available else "📄 Download Report"
         download_title = "Download as PDF" if pdf_available else "Download as HTML (use browser Print to PDF)"
         
-# No need to generate email content here - we'll fetch it via AJAX
+        # Enhanced email functionality with multiple options
         
         action_buttons = f'''
         <div style="position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px;">
             <button onclick="downloadPDF()" title="{download_title}" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; padding: 12px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(231,76,60,0.3); transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(231,76,60,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(231,76,60,0.3)'">
                 {download_label}
             </button>
-            <button onclick="emailReport()" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 12px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(52,152,219,0.3); transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(52,152,219,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(52,152,219,0.3)'">
-                📧 Email Report
-            </button>
+            
+            <!-- Email Dropdown -->
+            <div class="email-dropdown" style="position: relative;">
+                <button onclick="toggleEmailMenu()" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 12px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(52,152,219,0.3); transition: all 0.3s ease; font-size: 14px; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(52,152,219,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(52,152,219,0.3)'">
+                    📧 Email Report <span id="email-arrow">▼</span>
+                </button>
+                <div id="email-menu" style="position: absolute; top: 100%; right: 0; background: white; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.2); overflow: hidden; min-width: 250px; z-index: 1001; display: none;">
+                    <button onclick="quickEmail()" style="width: 100%; padding: 15px; border: none; background: white; text-align: left; cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                        <strong>📧 Quick Email</strong><br>
+                        <small style="color: #666;">Send short summary via email client</small>
+                    </button>
+                    <button onclick="downloadForEmail()" style="width: 100%; padding: 15px; border: none; background: white; text-align: left; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                        <strong>📎 Download for Attachment</strong><br>
+                        <small style="color: #666;">Download HTML file to attach to email</small>
+                    </button>
+                </div>
+            </div>
+            
             <button onclick="location.href='/'" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; padding: 12px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(39,174,96,0.3); transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(39,174,96,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(39,174,96,0.3)'">
                 🔄 New Assessment
             </button>
@@ -353,10 +398,35 @@ def view_report(session_id):
             window.location.href = '/download_pdf/{session_id}';
         }}
         
-        async function emailReport() {{
+        function toggleEmailMenu() {{
+            const menu = document.getElementById('email-menu');
+            const arrow = document.getElementById('email-arrow');
+            if (menu.style.display === 'none' || menu.style.display === '') {{
+                menu.style.display = 'block';
+                arrow.textContent = '▲';
+            }} else {{
+                menu.style.display = 'none';
+                arrow.textContent = '▼';
+            }}
+        }}
+        
+        // Close email menu when clicking outside
+        document.addEventListener('click', function(event) {{
+            const dropdown = document.querySelector('.email-dropdown');
+            if (!dropdown.contains(event.target)) {{
+                document.getElementById('email-menu').style.display = 'none';
+                document.getElementById('email-arrow').textContent = '▼';
+            }}
+        }});
+        
+        async function quickEmail() {{
             try {{
-                // Fetch the complete email report content
-                const response = await fetch('/email_content/{session_id}');
+                // Close the menu
+                document.getElementById('email-menu').style.display = 'none';
+                document.getElementById('email-arrow').textContent = '▼';
+                
+                // Fetch the short email report content
+                const response = await fetch('/email_content_short/{session_id}');
                 const emailContent = await response.text();
                 
                 const subject = encodeURIComponent('AI Risk Assessment Report - {assessment.workflow_name}');
@@ -370,6 +440,15 @@ def view_report(session_id):
                 console.error('Error generating email content:', error);
                 alert('Error generating email content. Please try again.');
             }}
+        }}
+        
+        function downloadForEmail() {{
+            // Close the menu
+            document.getElementById('email-menu').style.display = 'none';
+            document.getElementById('email-arrow').textContent = '▼';
+            
+            // Download HTML file for email attachment
+            window.location.href = '/download_html/{session_id}';
         }}
         </script>'''
         
@@ -415,7 +494,7 @@ def download_pdf(session_id):
     except Exception as e:
         return jsonify({'error': f'Report generation failed: {str(e)}'}), 500
 
-# Email content endpoint
+# Email content endpoints
 @app.route('/email_content/<session_id>')
 def get_email_content(session_id):
     """Get the complete email report content for a specific assessment"""
@@ -428,6 +507,44 @@ def get_email_content(session_id):
         return email_content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
     except Exception as e:
         return f"Error generating email content: {str(e)}", 500
+
+@app.route('/email_content_short/<session_id>')
+def get_email_content_short(session_id):
+    """Get the short email report content for mailto: links"""
+    try:
+        assessment = app.config.get(session_id)
+        if not assessment:
+            return "Assessment not found", 404
+        
+        email_content = generate_short_email_report(assessment, session_id)
+        return email_content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+    except Exception as e:
+        return f"Error generating email content: {str(e)}", 500
+
+@app.route('/download_html/<session_id>')
+def download_html(session_id):
+    """Download the complete HTML report for email attachment"""
+    try:
+        assessment = app.config.get(session_id)
+        if not assessment:
+            return jsonify({'error': 'Assessment not found'}), 404
+        
+        # Generate the complete HTML report
+        html_report = report_generator.generate_comprehensive_report(assessment)
+        
+        # Create filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = assessment.workflow_name.replace(' ', '_').replace('/', '_')
+        filename = f'ai_risk_report_{safe_name}_{timestamp}.html'
+        
+        return Response(
+            html_report,
+            mimetype='text/html',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+        
+    except Exception as e:
+        return jsonify({'error': f'HTML report generation failed: {str(e)}'}), 500
 
 @app.route('/api/assessment', methods=['POST'])
 def api_assessment():
