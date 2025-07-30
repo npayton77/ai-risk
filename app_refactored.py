@@ -4,7 +4,7 @@ AI Risk Assessment Web Application - Refactored Version
 Web frontend for the AI risk assessment tool using YAML configuration
 """
 
-from flask import Flask, render_template_string, request, jsonify, send_file, redirect, url_for, Response
+from flask import Flask, render_template_string, request, jsonify, send_file, redirect, url_for, Response, session
 import json
 import os
 import yaml
@@ -20,12 +20,19 @@ from questions_loader import questions_loader
 from risk_assessor import RiskAssessment, AIRiskAssessor
 from email_handlers import generate_complete_email_report, generate_short_email_report
 from static_pages import generate_system_info_page, generate_email_info_page
+from multistep_template_generator import MultiStepTemplateGenerator
 # Flask Web Application
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Change this in production
+app.secret_key = 'ai-risk-assessment-secret-key-2024'  # Change this in production
+
+# Configure session settings
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Initialize components
 template_generator = TemplateGenerator()
+multistep_generator = MultiStepTemplateGenerator()
 risk_assessor = AIRiskAssessor()
 report_generator = ReportGenerator()
 pdf_generator = PDFGenerator()
@@ -44,14 +51,265 @@ def favicon():
 
 @app.route('/')
 def index():
-    """Main assessment form page - now generated dynamically from YAML"""
-    html_content = template_generator.generate_assessment_form()
-    return render_template_string(html_content)
+    """Redirect to step 1 of the multi-step assessment"""
+    # Clear any existing session data for fresh start
+    session.clear()
+    return redirect('/step/1')
+
+@app.route('/step/<int:step_number>', methods=['GET', 'POST'])
+def step_handler(step_number):
+    """Handle multi-step assessment flow"""
+    try:
+        # Validate step number
+        if step_number < 1 or step_number > multistep_generator.total_steps:
+            return redirect('/step/1')
+        
+        # Initialize session data if needed
+        if 'assessment_data' not in session:
+            session['assessment_data'] = {}
+        
+        # Ensure session is marked as modified
+        session.modified = True
+        
+        if request.method == 'GET':
+            # Display the step
+            html_content = multistep_generator.generate_step_page(
+                step_number, 
+                session.get('assessment_data', {}),
+                session.pop('step_errors', None)
+            )
+            return html_content
+        
+        elif request.method == 'POST':
+            # Process the step submission
+            return process_step_submission(step_number)
+            
+    except Exception as e:
+        return f"<html><body><h1>Error</h1><p>Step processing failed: {str(e)}</p><a href='/step/1'>Start Over</a></body></html>"
+
+def process_step_submission(step_number):
+    """Process form submission for a specific step"""
+    errors = {}
+    step_key = multistep_generator.steps[step_number - 1]['key']
+    
+
+    
+    # Validate and store step data
+    if step_key == 'basic_info':
+        # Process basic information
+        workflow_name = request.form.get('workflow_name', '').strip()
+        assessor = request.form.get('assessor', '').strip()
+        
+        if not workflow_name:
+            errors['workflow_name'] = 'Workflow/System name is required'
+        if not assessor:
+            errors['assessor'] = 'Assessor name is required'
+        
+        if not errors:
+            session['assessment_data']['workflow_name'] = workflow_name
+            session['assessment_data']['assessor'] = assessor
+            session.modified = True
+
+    
+    else:
+        # Process question step
+        question_value = request.form.get(step_key, '').strip()
+        reasoning_value = request.form.get(f'{step_key}_reasoning', '').strip()
+        
+        if not question_value:
+            errors[step_key] = 'Please select an option'
+        
+        if not errors:
+            session['assessment_data'][step_key] = question_value
+            session['assessment_data'][f'{step_key}_reasoning'] = reasoning_value
+            session.modified = True
+
+    
+    # Handle validation errors
+    if errors:
+        session['step_errors'] = errors
+        return redirect(f'/step/{step_number}')
+    
+    # Move to next step or generate report
+    if step_number < multistep_generator.total_steps:
+        return redirect(f'/step/{step_number + 1}')
+    else:
+        # Final step - generate the assessment report
+        return generate_final_assessment()
+
+def generate_final_assessment():
+    """Generate the final assessment report from session data"""
+    try:
+        assessment_data = session.get('assessment_data', {})
+        
+        # Validate we have all required data
+        required_fields = ['workflow_name', 'assessor', 'autonomy', 'oversight', 'impact', 'orchestration']
+        if 'data_sensitivity' in risk_assessor.dimension_scores:
+            required_fields.append('data_sensitivity')
+        
+        missing_fields = [field for field in required_fields if not assessment_data.get(field)]
+        if missing_fields:
+            session['step_errors'] = {field: 'This field is required' for field in missing_fields}
+            return redirect('/step/1')
+        
+        # Extract form data
+        workflow_name = assessment_data['workflow_name']
+        assessor = assessment_data['assessor']
+        autonomy = assessment_data['autonomy']
+        oversight = assessment_data['oversight']
+        impact = assessment_data['impact']
+        orchestration = assessment_data['orchestration']
+        data_sensitivity = assessment_data.get('data_sensitivity')
+        
+        # Extract reasoning
+        autonomy_reasoning = assessment_data.get('autonomy_reasoning', '').strip()
+        oversight_reasoning = assessment_data.get('oversight_reasoning', '').strip()
+        impact_reasoning = assessment_data.get('impact_reasoning', '').strip()
+        orchestration_reasoning = assessment_data.get('orchestration_reasoning', '').strip()
+        data_sensitivity_reasoning = assessment_data.get('data_sensitivity_reasoning', '').strip()
+        
+        # Calculate risk
+        risk_score, risk_level = risk_assessor.calculate_risk_score(
+            autonomy, oversight, impact, orchestration, data_sensitivity
+        )
+        
+        # Generate recommendations
+        recommendations = risk_assessor.generate_recommendations(
+            risk_level, autonomy, oversight, impact, data_sensitivity
+        )
+        
+        # Create assessment object
+        responses_dict = {
+            'autonomy_reasoning': autonomy_reasoning or 'Not provided',
+            'oversight_reasoning': oversight_reasoning or 'Not provided',
+            'impact_reasoning': impact_reasoning or 'Not provided',
+            'orchestration_reasoning': orchestration_reasoning or 'Not provided'
+        }
+        
+        # Add data sensitivity if it exists
+        if data_sensitivity:
+            responses_dict['data_sensitivity_reasoning'] = data_sensitivity_reasoning or 'Not provided'
+        
+        assessment = RiskAssessment(
+            workflow_name=workflow_name,
+            assessor=assessor,
+            date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            autonomy_level=autonomy,
+            oversight_level=oversight,
+            impact_level=impact,
+            orchestration_type=orchestration,
+            overall_risk=risk_level,
+            risk_score=risk_score,
+            recommendations=recommendations,
+            responses=responses_dict
+        )
+        
+        # Add data sensitivity level to assessment if it exists
+        if data_sensitivity:
+            assessment.data_sensitivity_level = data_sensitivity
+        
+        # Store assessment in session for the report page
+        session_id = f"assessment_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(assessment.workflow_name) % 10000}"
+        app.config[session_id] = assessment
+        
+        # Clear the session data
+        session.pop('assessment_data', None)
+        session.pop('step_errors', None)
+        
+        # Redirect to the beautiful report page
+        return redirect(f'/report/{session_id}')
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/assess', methods=['POST'])
 def assess_risk():
-    """Process the risk assessment form"""
+    """Legacy route - redirect to step-based flow"""
+    return redirect('/step/1')
+
+# Keep the original single-page route for backward compatibility
+@app.route('/single-page')
+def single_page_assessment():
+    """Legacy single-page assessment form"""
+    html_content = template_generator.generate_assessment_form()
+    return render_template_string(html_content)
+
+@app.route('/single-page/assess', methods=['POST'])
+def single_page_assess_risk():
+    """Process the legacy single-page risk assessment form"""
     try:
+        # Get form data
+        workflow_name = request.form.get('workflow_name', '').strip()
+        assessor = request.form.get('assessor', '').strip()
+        
+        autonomy = request.form.get('autonomy')
+        oversight = request.form.get('oversight')
+        impact = request.form.get('impact')
+        orchestration = request.form.get('orchestration')
+        data_sensitivity = request.form.get('data_sensitivity')
+        
+        # Get reasoning
+        autonomy_reasoning = request.form.get('autonomy_reasoning', '').strip()
+        oversight_reasoning = request.form.get('oversight_reasoning', '').strip()
+        impact_reasoning = request.form.get('impact_reasoning', '').strip()
+        orchestration_reasoning = request.form.get('orchestration_reasoning', '').strip()
+        data_sensitivity_reasoning = request.form.get('data_sensitivity_reasoning', '').strip()
+        
+        # Validate required fields - check if data_sensitivity is required
+        required_fields = [workflow_name, assessor, autonomy, oversight, impact, orchestration]
+        if 'data_sensitivity' in risk_assessor.dimension_scores:
+            required_fields.append(data_sensitivity)
+        
+        if not all(required_fields):
+            return jsonify({'error': 'All fields are required'}), 400
+        
+        # Calculate risk
+        risk_score, risk_level = risk_assessor.calculate_risk_score(
+            autonomy, oversight, impact, orchestration, data_sensitivity
+        )
+        
+        # Generate recommendations
+        recommendations = risk_assessor.generate_recommendations(
+            risk_level, autonomy, oversight, impact, data_sensitivity
+        )
+        
+        # Create assessment object
+        responses_dict = {
+            'autonomy_reasoning': autonomy_reasoning or 'Not provided',
+            'oversight_reasoning': oversight_reasoning or 'Not provided',
+            'impact_reasoning': impact_reasoning or 'Not provided',
+            'orchestration_reasoning': orchestration_reasoning or 'Not provided'
+        }
+        
+        # Add data sensitivity if it exists
+        if data_sensitivity:
+            responses_dict['data_sensitivity_reasoning'] = data_sensitivity_reasoning or 'Not provided'
+        
+        assessment = RiskAssessment(
+            workflow_name=workflow_name,
+            assessor=assessor,
+            date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            autonomy_level=autonomy,
+            oversight_level=oversight,
+            impact_level=impact,
+            orchestration_type=orchestration,
+            overall_risk=risk_level,
+            risk_score=risk_score,
+            recommendations=recommendations,
+            responses=responses_dict
+        )
+        
+        # Add data sensitivity level to assessment if it exists
+        if data_sensitivity:
+            assessment.data_sensitivity_level = data_sensitivity
+        
+        # Store assessment in session for the report page
+        session_id = f"assessment_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(assessment.workflow_name) % 10000}"
+        app.config[session_id] = assessment
+        
+        # Redirect to the beautiful report page instead of returning JSON
+        return redirect(f'/report/{session_id}')
+        
         # Get form data
         workflow_name = request.form.get('workflow_name', '').strip()
         assessor = request.form.get('assessor', '').strip()
@@ -374,15 +632,23 @@ if __name__ == '__main__':
         print(f"Error: Failed to load questions from {questions_dir}/ directory: {e}")
         exit(1)
     
-    print("Starting AI Risk Assessment Web Application (Enhanced)...")
+    print("Starting AI Risk Assessment Web Application (Multi-Step Wizard)...")
     print("Configuration loaded from YAML files:")
     print("- questions/ directory: Individual question files for each assessment dimension")
     print("- scoring.yaml: Risk scoring and recommendations")
-    print("New features:")
+    print("✨ New Multi-Step Wizard Features:")
+    print("🧭 Step-by-step guided assessment")
+    print("📊 Progress tracking with visual indicators")
+    print("💾 Session-based data persistence")
+    print("🔄 Forward/backward navigation")
+    print("✅ Per-step validation")
+    print("Other features:")
     print(f"{'✅' if pdf_generator.weasyprint_available else '⚠️'} PDF report generation: {'Enabled' if pdf_generator.weasyprint_available else 'Fallback mode (HTML)'}")
     print("📧 Email report functionality (mailto: links)")
     print("🎨 Modern UI enhancements")
-    print("Open your browser and go to: http://localhost:9000")
-    print("System info: http://localhost:9000/system_info")
-    print("Email info: http://localhost:9000/email_info")
+    print("")
+    print("🚀 Multi-Step Assessment: http://localhost:9000")
+    print("📄 Legacy Single-Page: http://localhost:9000/single-page")  
+    print("🔧 System info: http://localhost:9000/system_info")
+    print("📧 Email info: http://localhost:9000/email_info")
     app.run(debug=True, host='0.0.0.0', port=9000) 
