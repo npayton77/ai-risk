@@ -1,0 +1,154 @@
+# Flexible AI Risk Assessment Scoring Configuration
+# Supports multiple questions per dimension with weights and aggregation
+
+# Dimension configuration with aggregation strategies
+dimensions:
+  autonomy:
+    aggregation: "weighted_average"  # Options: sum, average, weighted_average, max, min
+    questions:
+      autonomy:  # Original autonomy question
+        weight: 1.0
+        scoring:
+          tool: 1
+          assistant: 2
+          agent: 3
+          autonomous: 4
+      
+      autonomy_scope:  # NEW: Decision scope question
+        weight: 0.8  # Slightly less important than main autonomy
+        scoring:
+          limited: 1
+          moderate: 2
+          broad: 3
+          unlimited: 4
+      
+      autonomy_frequency:  # NEW: Decision frequency question
+        weight: 0.6  # Supporting question, lower weight
+        scoring:
+          rarely: 1
+          occasionally: 2
+          frequently: 3
+          continuously: 4
+  
+  oversight:
+    aggregation: "weighted_average"
+    questions:
+      oversight:
+        weight: 1.0
+        scoring:
+          continuous: 1
+          checkpoint: 2
+          exception: 3
+          minimal: 4
+  
+  impact:
+    aggregation: "weighted_average"
+    questions:
+      impact:
+        weight: 1.0
+        scoring:
+          informational: 1
+          operational: 2
+          strategic: 3
+          external: 4
+  
+  orchestration:
+    aggregation: "weighted_average"
+    questions:
+      orchestration:
+        weight: 1.0
+        scoring:
+          single: 1
+          sequential: 2
+          parallel: 3
+          hierarchical: 4
+  
+  data_sensitivity:
+    aggregation: "weighted_average"
+    questions:
+      data_sensitivity:
+        weight: 1.0
+        scoring:
+          public: 1
+          internal: 2
+          confidential: 3
+          regulated: 4
+
+# Risk thresholds (same as before)
+risk_thresholds:
+  low:
+    min: 5
+    max: 10
+    level: "low"
+  medium:
+    min: 11
+    max: 15
+    level: "medium"
+  high:
+    min: 16
+    max: 19
+    level: "high"
+  critical:
+    min: 20
+    max: 25
+    level: "critical"
+
+# Default scoring for unknown questions (optional)
+default_scoring:
+  # If a question doesn't have explicit scoring, use these rules
+  scale_1_to_4:
+    option_1: 1
+    option_2: 2
+    option_3: 3
+    option_4: 4
+  scale_1_to_5:
+    option_1: 1
+    option_2: 2
+    option_3: 3
+    option_4: 4
+    option_5: 5
+
+# Question metadata for auto-scoring (optional)
+question_templates:
+  risk_scale:
+    type: "ordinal"
+    min_score: 1
+    max_score: 4
+    description: "Standard 1-4 risk scale"
+  
+  frequency_scale:
+    type: "ordinal"
+    min_score: 1
+    max_score: 5
+    options:
+      never: 1
+      rarely: 2
+      sometimes: 3
+      often: 4
+      always: 5
+
+# Display styling for different risk levels (same as before)
+risk_styling:
+  low:
+    color: "#27ae60"
+    bg: "#e6f3e6"
+    border: "#27ae60"
+    emoji: "LOW"
+  
+  medium:
+    color: "#f39c12"
+    bg: "#fff3cd"
+    border: "#f39c12"
+    emoji: "MED"
+  
+  high:
+    color: "#e74c3c"
+    bg: "#f8d7da"
+    border: "#e74c3c"
+    emoji: "HIGH"
+  
+  critical:
+    color: "#8e44ad"
+    bg: "#e2e3f3"
+    border: "#8e44ad"
+    emoji: "CRIT" 
