@@ -16,6 +16,7 @@ from template_generator import TemplateGenerator
 from report_generator import ReportGenerator
 from pdf_generator import PDFGenerator
 from email_sender import EmailSender
+from questions_loader import questions_loader
 
 # Import the risk assessment logic
 @dataclass
@@ -34,13 +35,12 @@ class RiskAssessment:
     responses: Dict[str, str]
 
 class AIRiskAssessor:
-    def __init__(self, scoring_file: str = 'scoring.yaml', questions_file: str = 'questions.yaml'):
+    def __init__(self, scoring_file: str = 'scoring.yaml', questions_dir: str = 'questions'):
         """Initialize with YAML configuration files"""
         with open(scoring_file, 'r', encoding='utf-8') as f:
             self.scoring_config = yaml.safe_load(f)
         
-        with open(questions_file, 'r', encoding='utf-8') as f:
-            self.questions_config = yaml.safe_load(f)
+        self.questions_config = questions_loader.load_all_questions()
         
         # Extract scoring data from YAML
         self.dimension_scores = self.scoring_config['scoring']['dimensions']
@@ -135,6 +135,17 @@ risk_assessor = AIRiskAssessor()
 report_generator = ReportGenerator()
 pdf_generator = PDFGenerator()
 email_sender = EmailSender()
+
+@app.route('/favicon.ico')
+def favicon():
+    """Serve the custom favicon"""
+    try:
+        with open('static_favicon.svg', 'r') as f:
+            svg_content = f.read()
+        return Response(svg_content, mimetype='image/svg+xml')
+    except FileNotFoundError:
+        # Fallback to a simple data URI favicon if file is missing
+        return Response('', status=404)
 
 @app.route('/')
 def index():
@@ -562,6 +573,7 @@ def email_info_page():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Email Functionality - AI Risk Assessment Tool</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.ico">
         <style>
             body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; min-height: 100vh; }
             .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
@@ -637,6 +649,7 @@ def system_info_page():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>System Information - AI Risk Assessment Tool</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.ico">
         <style>
             body {{ font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; min-height: 100vh; }}
             .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }}
@@ -702,16 +715,37 @@ def system_info_page():
     return html_content
 
 if __name__ == '__main__':
-    # Check for required files
-    required_files = ['questions.yaml', 'scoring.yaml']
+    # Check for required files and directories
+    required_files = ['scoring.yaml']
     for file in required_files:
         if not os.path.exists(file):
             print(f"Error: {file} not found. Please ensure all YAML configuration files are present.")
             exit(1)
     
+    # Check for questions directory and required question files
+    questions_dir = 'questions'
+    required_question_files = ['autonomy.yaml', 'oversight.yaml', 'impact.yaml', 'orchestration.yaml', 'data_sensitivity.yaml']
+    
+    if not os.path.exists(questions_dir):
+        print(f"Error: {questions_dir} directory not found. Please ensure the questions directory exists.")
+        exit(1)
+    
+    for question_file in required_question_files:
+        question_path = os.path.join(questions_dir, question_file)
+        if not os.path.exists(question_path):
+            print(f"Warning: {question_path} not found. Some questions may not be available.")
+    
+    # Test loading questions to ensure they're valid
+    try:
+        questions_config = questions_loader.load_all_questions()
+        print(f"✅ Successfully loaded {len(questions_config['questions'])} question categories from {questions_dir}/ directory")
+    except Exception as e:
+        print(f"Error: Failed to load questions from {questions_dir}/ directory: {e}")
+        exit(1)
+    
     print("Starting AI Risk Assessment Web Application (Enhanced)...")
     print("Configuration loaded from YAML files:")
-    print("- questions.yaml: Questions and form structure")
+    print("- questions/ directory: Individual question files for each assessment dimension")
     print("- scoring.yaml: Risk scoring and recommendations")
     print("New features:")
     print(f"{'✅' if pdf_generator.weasyprint_available else '⚠️'} PDF report generation: {'Enabled' if pdf_generator.weasyprint_available else 'Fallback mode (HTML)'}")

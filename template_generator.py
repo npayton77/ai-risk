@@ -6,12 +6,12 @@ Generates HTML templates dynamically from YAML configuration
 
 import yaml
 from typing import Dict, Any
+from questions_loader import questions_loader
 
 class TemplateGenerator:
-    def __init__(self, questions_file: str = 'questions.yaml'):
-        """Initialize with questions configuration"""
-        with open(questions_file, 'r') as f:
-            self.config = yaml.safe_load(f)
+    def __init__(self, questions_dir: str = 'questions'):
+        """Initialize with questions configuration from directory"""
+        self.config = questions_loader.load_all_questions()
     
     def generate_assessment_form(self) -> str:
         """Generate the main assessment form HTML"""
@@ -69,6 +69,7 @@ class TemplateGenerator:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Risk Assessment Tool</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico">
     <style>
         * {{
             margin: 0;

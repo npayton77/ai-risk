@@ -8,15 +8,15 @@ import yaml
 from typing import Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
+from questions_loader import questions_loader
 
 class ReportGenerator:
-    def __init__(self, scoring_file: str = 'scoring.yaml', questions_file: str = 'questions.yaml'):
+    def __init__(self, scoring_file: str = 'scoring.yaml', questions_dir: str = 'questions'):
         """Initialize with configuration files"""
         with open(scoring_file, 'r') as f:
             self.scoring_config = yaml.safe_load(f)
         
-        with open(questions_file, 'r') as f:
-            self.questions_config = yaml.safe_load(f)
+        self.questions_config = questions_loader.load_all_questions()
         
         self.risk_styling = self.scoring_config['risk_styling']
         self.dimension_scores = self.scoring_config['scoring']['dimensions']
@@ -139,6 +139,7 @@ class ReportGenerator:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Risk Assessment Report - {assessment.workflow_name}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico">
     <style>
         * {{
             margin: 0;
