@@ -46,59 +46,7 @@ scoring:
       max_score: 20
       level: "critical"
 
-recommendations:
-  # Base recommendations by risk level
-  by_risk_level:
-    low:
-      - "Implement standard review processes for AI outputs"
-      - "Establish clear escalation paths for edge cases"
-      - "Maintain documentation of AI decisions and human overrides"
-    
-    medium:
-      - "Implement regular audits of AI decision quality"
-      - "Set up confidence thresholds for autonomous actions"
-      - "Establish fallback procedures for AI failures"
-      - "Monitor for model drift and performance degradation"
-    
-    high:
-      - "Implement comprehensive real-time monitoring"
-      - "Set up automatic circuit breakers for anomalous behavior"
-      - "Develop rapid rollback capabilities"
-      - "Assign dedicated AI oversight personnel"
-      - "Conduct regular stress testing"
-    
-    critical:
-      - "Implement sandboxed testing environments"
-      - "Require formal verification of AI behavior"
-      - "Install emergency kill switches"
-      - "Conduct extensive simulation testing before deployment"
-      - "Consider if this risk level is acceptable for your organization"
 
-  # Conditional recommendations based on specific combinations
-  conditional:
-    - condition:
-        autonomy: ["agent", "autonomous"]
-        oversight: ["minimal"]
-      recommendation: "HIGH PRIORITY: Increase human oversight given high autonomy level"
-    
-    - condition:
-        impact: ["external"]
-        oversight: ["exception", "minimal"]
-      recommendation: "CRITICAL: External impact requires more frequent human review"
-    
-    - condition:
-        autonomy: ["autonomous"]
-      recommendation: "Consider implementing AI explainability tools"
-    
-    - condition:
-        data_sensitivity: ["regulated"]
-        autonomy: ["agent", "autonomous"]
-      recommendation: "COMPLIANCE ALERT: Regulated data with high autonomy requires legal review and audit trails"
-    
-    - condition:
-        data_sensitivity: ["confidential", "regulated"]
-        oversight: ["minimal", "exception"]
-      recommendation: "SECURITY PRIORITY: Sensitive data requires enhanced monitoring and access controls"
 
 # Display styling for different risk levels
 risk_styling:

@@ -25,17 +25,22 @@ class RiskAssessment:
     responses: Dict[str, str]
 
 class AIRiskAssessor:
-    def __init__(self, scoring_file: str = 'scoring.yaml', questions_dir: str = 'questions'):
+    def __init__(self, scoring_file: str = 'scoring.yaml', recommendations_file: str = 'recommendations.yaml', questions_dir: str = 'questions'):
         """Initialize with YAML configuration files"""
+        # Load scoring configuration
         with open(scoring_file, 'r', encoding='utf-8') as f:
             self.scoring_config = yaml.safe_load(f)
         
+        # Load recommendations configuration
+        with open(recommendations_file, 'r', encoding='utf-8') as f:
+            self.recommendations_config = yaml.safe_load(f)
+        
+        # Load questions configuration
         self.questions_config = questions_loader.load_all_questions()
         
-        # Extract scoring data from YAML
+        # Extract configuration data
         self.dimension_scores = self.scoring_config['scoring']['dimensions']
         self.risk_thresholds = self.scoring_config['scoring']['risk_thresholds']
-        self.recommendations_config = self.scoring_config['recommendations']
         self.risk_styling = self.scoring_config['risk_styling']
 
     def calculate_risk_score(self, autonomy: str, oversight: str, impact: str, orchestration: str, data_sensitivity: str = None) -> Tuple[int, str]:
