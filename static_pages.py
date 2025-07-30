@@ -4,11 +4,8 @@ Static Page Handlers for AI Risk Assessment Tool
 Contains HTML content and handlers for informational pages
 """
 
-from pdf_generator import PDFGenerator
-
-def generate_system_info_page(pdf_generator: PDFGenerator) -> str:
+def generate_system_info_page() -> str:
     """Generate the system information page HTML"""
-    pdf_info = pdf_generator.get_system_requirements_info()
     
     return f'''
     <!DOCTYPE html>
@@ -37,13 +34,9 @@ def generate_system_info_page(pdf_generator: PDFGenerator) -> str:
         <div class="container">
             <h1>🔧 System Information</h1>
             
-            <div class="status-box {'status-good' if pdf_generator.weasyprint_available else 'status-warning'}">
-                <h3>PDF Generation Status</h3>
+            <div class="status-box status-good">
+                <h3>Application Features</h3>
                 <ul class="feature-list">
-                    <li class="feature-item {'feature-enabled' if pdf_generator.weasyprint_available else 'feature-fallback'}">
-                        {'✅' if pdf_generator.weasyprint_available else '⚠️'} 
-                        WeasyPrint PDF Generation: {'Enabled' if pdf_generator.weasyprint_available else 'Fallback Mode'}
-                    </li>
                     <li class="feature-item feature-enabled">
                         ✅ HTML Report Generation: Enabled
                     </li>
@@ -56,8 +49,6 @@ def generate_system_info_page(pdf_generator: PDFGenerator) -> str:
                 </ul>
             </div>
             
-            {"<div class='status-box status-warning'><h3>PDF Setup Instructions</h3><pre>" + pdf_info + "</pre></div>" if not pdf_generator.weasyprint_available else ""}
-            
             <div class="status-box">
                 <h3>Current Features</h3>
                 <p><strong>✨ Available Now:</strong></p>
@@ -65,9 +56,10 @@ def generate_system_info_page(pdf_generator: PDFGenerator) -> str:
                     <li>📊 Comprehensive AI Risk Assessment</li>
                     <li>🎨 Beautiful HTML Reports</li>
                     <li>📧 Email Report Delivery</li>
-                    <li>{'📄 PDF Generation' if pdf_generator.weasyprint_available else '📄 HTML Download (Print to PDF)'}</li>
+                    <li>📄 HTML Download (Use browser's "Print to PDF" for PDF)</li>
                     <li>🔄 Dynamic YAML Configuration</li>
                     <li>📱 Mobile-Responsive Design</li>
+                    <li>🧭 Multi-Step Wizard Interface</li>
                 </ul>
             </div>
             

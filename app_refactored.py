@@ -14,7 +14,7 @@ from typing import Dict, List, Tuple
 import tempfile
 from template_generator import TemplateGenerator
 from report_generator import ReportGenerator
-from pdf_generator import PDFGenerator
+
 from email_sender import EmailSender
 from questions_loader import questions_loader
 from risk_assessor import RiskAssessment, AIRiskAssessor
@@ -35,7 +35,7 @@ template_generator = TemplateGenerator()
 multistep_generator = MultiStepTemplateGenerator()
 risk_assessor = AIRiskAssessor()
 report_generator = ReportGenerator()
-pdf_generator = PDFGenerator()
+
 email_sender = EmailSender()
 
 @app.route('/favicon.ico')
@@ -400,18 +400,8 @@ def view_report(session_id):
         html_report = report_generator.generate_comprehensive_report(assessment)
         
         # Add modern action buttons to the report
-        # Check if PDF generation is available
-        pdf_available = pdf_generator.weasyprint_available
-        download_label = "📄 Download PDF" if pdf_available else "📄 Download Report"
-        download_title = "Download as PDF" if pdf_available else "Download as HTML (use browser Print to PDF)"
-        
-        # Enhanced email functionality with multiple options
-        
         action_buttons = f'''
         <div style="position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px;">
-            <button onclick="downloadPDF()" title="{download_title}" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; padding: 12px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(231,76,60,0.3); transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(231,76,60,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(231,76,60,0.3)'">
-                {download_label}
-            </button>
             
             <!-- Email Dropdown -->
             <div class="email-dropdown" style="position: relative;">
@@ -436,10 +426,6 @@ def view_report(session_id):
         </div>
         
         <script>
-        function downloadPDF() {{
-            window.location.href = '/download_pdf/{session_id}';
-        }}
-        
         function toggleEmailMenu() {{
             const menu = document.getElementById('email-menu');
             const arrow = document.getElementById('email-arrow');
@@ -502,39 +488,6 @@ def view_report(session_id):
     except Exception as e:
         return f"<html><body><h1>Error</h1><p>Failed to generate report: {str(e)}</p><a href='/'>Back to Assessment</a></body></html>"
 
-@app.route('/download_pdf/<session_id>')
-def download_pdf(session_id):
-    """Download the risk assessment report as PDF or fallback HTML"""
-    try:
-        assessment = app.config.get(session_id)
-        if not assessment:
-            return jsonify({'error': 'Assessment not found'}), 404
-        
-        # Generate HTML report
-        html_report = report_generator.generate_comprehensive_report(assessment)
-        
-        # Generate PDF or fallback HTML
-        content_bytes = pdf_generator.generate_pdf_report(assessment, html_report)
-        
-        # Create filename and MIME type based on availability
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_name = assessment.workflow_name.replace(' ', '_').replace('/', '_')
-        
-        if pdf_generator.weasyprint_available:
-            filename = f'ai_risk_report_{safe_name}_{timestamp}.pdf'
-            mimetype = 'application/pdf'
-        else:
-            filename = f'ai_risk_report_{safe_name}_{timestamp}.html'
-            mimetype = 'text/html'
-        
-        return Response(
-            content_bytes,
-            mimetype=mimetype,
-            headers={'Content-Disposition': f'attachment; filename={filename}'}
-        )
-        
-    except Exception as e:
-        return jsonify({'error': f'Report generation failed: {str(e)}'}), 500
 
 # Email content endpoints
 @app.route('/email_content/<session_id>')
@@ -600,8 +553,8 @@ def email_info_page():
 
 @app.route('/system_info')
 def system_info_page():
-    """Display system information and PDF setup instructions"""
-    return generate_system_info_page(pdf_generator)
+    """Display system information"""
+    return generate_system_info_page()
 
 if __name__ == '__main__':
     # Check for required files and directories
@@ -643,7 +596,7 @@ if __name__ == '__main__':
     print("🔄 Forward/backward navigation")
     print("✅ Per-step validation")
     print("Other features:")
-    print(f"{'✅' if pdf_generator.weasyprint_available else '⚠️'} PDF report generation: {'Enabled' if pdf_generator.weasyprint_available else 'Fallback mode (HTML)'}")
+    print("✅ HTML report generation: Enabled")
     print("📧 Email report functionality (mailto: links)")
     print("🎨 Modern UI enhancements")
     print("")

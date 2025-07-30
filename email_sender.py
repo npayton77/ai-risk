@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Email Sender for AI Risk Assessment Reports
-Handles sending PDF reports via email with professional formatting
+Handles sending reports via email with professional formatting
 """
 
 import smtplib
@@ -52,8 +52,7 @@ class EmailSender:
                    subject: str,
                    assessment_name: str,
                    risk_level: str,
-                   pdf_bytes: bytes = None,
-                   pdf_filename: str = None,
+                   
                    cc_emails: List[str] = None) -> bool:
         """
         Send risk assessment report via email
@@ -63,8 +62,7 @@ class EmailSender:
             subject: Email subject line
             assessment_name: Name of the assessed workflow/system
             risk_level: Risk level (low, medium, high, critical)
-            pdf_bytes: PDF report as bytes
-            pdf_filename: Name of PDF file
+            
             cc_emails: List of CC email addresses
             
         Returns:
@@ -88,11 +86,7 @@ class EmailSender:
             html_part = MIMEText(html_body, 'html')
             msg.attach(html_part)
             
-            # Attach PDF if provided
-            if pdf_bytes and pdf_filename:
-                pdf_attachment = MIMEApplication(pdf_bytes, _subtype="pdf")
-                pdf_attachment.add_header('Content-Disposition', 'attachment', filename=pdf_filename)
-                msg.attach(pdf_attachment)
+            
             
             # Send email
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:

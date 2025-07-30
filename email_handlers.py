@@ -91,7 +91,7 @@ Orchestration Type Reasoning:
 
 For the interactive version with charts and visualizations:
 View online: http://localhost:9000/report/{session_id}
-Download: http://localhost:9000/download_pdf/{session_id}
+View Report: http://localhost:9000/report/{session_id}
 
 Best regards,
 {assessment.assessor}
@@ -123,7 +123,7 @@ ASSESSMENT DETAILS:
 - Report ID: RA-{datetime.now().strftime('%Y%m%d')}-{hash(assessment.workflow_name) % 10000}
 
 View full interactive report: http://localhost:9000/report/{session_id}
-Download complete report: http://localhost:9000/download_pdf/{session_id}
+View complete report: http://localhost:9000/report/{session_id}
 Download HTML for email attachment: http://localhost:9000/download_html/{session_id}
 
 Best regards,
