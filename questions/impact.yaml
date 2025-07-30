@@ -1,0 +1,19 @@
+impact_questions:
+  impact:
+    title: "📊 Output Impact: What is the consequence level of AI decisions/outputs?"
+    help_text: "Think about the worst-case scenario if AI makes a mistake"
+    required: true
+    options:
+      informational:
+        title: "Informational"
+        description: "Data/insights only - reports, analysis (embarrassing but fixable)"
+      operational:
+        title: "Operational"
+        description: "Affects daily operations - scheduling, routing (disrupts business but contained)"
+      strategic:
+        title: "Strategic"
+        description: "Business-critical decisions - investments, hiring (major business impact)"
+      external:
+        title: "External"
+        description: "Customer/regulatory impact - patient care, financial transactions (affects public/regulators)"
+    reasoning_prompt: "Why did you choose this level? (Optional)"
