@@ -1,19 +1,22 @@
 autonomy_questions:
   autonomy:
-    title: "🎯 Autonomy Level: How much decision-making power does the AI have?"
-    help_text: "Consider who makes the final decisions in your workflow"
+    title: "\U0001F3AF Autonomy Level: How much decision-making power does the AI\
+      \ have?"
+    help_text: Consider who makes the final decisions in your workflow
     required: true
     options:
       tool:
-        title: "Tool"
-        description: "AI provides recommendations only - humans always decide"
+        title: Tool
+        description: AI provides recommendations only - humans always decide
       assistant:
-        title: "Assistant" 
-        description: "AI executes tasks with human approval - humans approve each action"
+        title: Assistant
+        description: AI executes tasks with human approval - humans approve each action
       agent:
-        title: "Agent"
-        description: "AI acts independently within defined boundaries - humans monitor"
+        title: Agent
+        description: AI acts independently within defined boundaries - humans monitor
       autonomous:
-        title: "Autonomous"
-        description: "AI manages entire workflows without oversight - humans only audit periodically"
-    reasoning_prompt: "Why did you choose this level? (Optional)"
+        title: Autonomous
+        description: AI manages entire workflows without oversight - humans only audit
+          periodically
+    reasoning_prompt: Why did you choose this level? (Optional)
+

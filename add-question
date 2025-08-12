@@ -1,0 +1,13 @@
+#!/bin/bash
+# Simple wrapper script for adding questions to the AI Risk Assessment system
+
+cd "$(dirname "$0")"
+
+# Check if virtual environment exists
+if [ ! -d "venv" ]; then
+    echo "❌ Virtual environment not found. Please run from the project root directory."
+    exit 1
+fi
+
+# Activate virtual environment and run question manager
+source venv/bin/activate && python question_manager.py add

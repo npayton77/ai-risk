@@ -211,6 +211,9 @@ class MultiStepTemplateGenerator:
         <div class="header">
             <h1>{step_config['title']}</h1>
             <div class="subtitle">{step_config['subtitle']}</div>
+            <div class="admin-link">
+                <a href="/admin" style="color: #667eea; text-decoration: none; font-size: 0.9rem; opacity: 0.7;">⚙️ Admin</a>
+            </div>
         </div>
         
         {progress_bar}

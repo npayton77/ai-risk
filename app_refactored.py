@@ -21,6 +21,7 @@ from risk_assessor import RiskAssessment, AIRiskAssessor
 from email_handlers import generate_complete_email_report, generate_short_email_report
 from static_pages import generate_system_info_page, generate_email_info_page
 from multistep_template_generator import MultiStepTemplateGenerator
+from admin_interface import admin_interface
 # Flask Web Application
 app = Flask(__name__)
 app.secret_key = 'ai-risk-assessment-secret-key-2024'  # Change this in production
@@ -37,6 +38,9 @@ risk_assessor = AIRiskAssessor()
 report_generator = ReportGenerator()
 
 email_sender = EmailSender()
+
+# Register admin interface blueprint
+app.register_blueprint(admin_interface.bp)
 
 @app.route('/favicon.ico')
 def favicon():
