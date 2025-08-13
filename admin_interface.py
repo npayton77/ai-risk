@@ -960,9 +960,422 @@ class AdminInterface:
     
     def edit_question(self, dimension: str, question_id: str):
         """Edit an existing question"""
-        # Implementation for editing questions
-        flash('Edit functionality coming soon!', 'info')
-        return redirect(url_for('admin.questions_list'))
+        if request.method == 'POST':
+            return self._handle_edit_question_post(dimension, question_id)
+        
+        # GET request - load existing question data and show form
+        question_file = self.questions_dir / f"{dimension}.yaml"
+        if not question_file.exists():
+            flash(f'Dimension file {dimension}.yaml not found', 'error')
+            return redirect(url_for('admin.questions_list'))
+        
+        # Load question data
+        data = self.load_yaml_file(question_file)
+        dimension_key = f"{dimension}_questions"
+        
+        if dimension_key not in data or question_id not in data[dimension_key]:
+            flash(f'Question "{question_id}" not found in {dimension} dimension', 'error')
+            return redirect(url_for('admin.questions_list'))
+        
+        question_data = data[dimension_key][question_id]
+        
+        # Load scoring data
+        scoring_config = self.get_scoring_config()
+        scoring_data = scoring_config.get('dimensions', {}).get(dimension, {}).get('questions', {}).get(question_id, {})
+        
+        template = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Question - Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .form-card {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .form-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .form-header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .form-header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-text {
+            margin-top: 5px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .options-section {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .options-header {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        .option-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr auto;
+            gap: 15px;
+            align-items: end;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .option-row:last-child { margin-bottom: 0; }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn:hover { transform: translateY(-2px); }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 40px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .alert-info { background: #e3f2fd; color: #1976d2; border-left: 4px solid #2196f3; }
+        
+        @media (max-width: 768px) {
+            .option-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .form-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            <div class="form-header">
+                <h1>✏️ Edit Question</h1>
+                <p>Modify question in {{ dimension.replace('_', ' ').title() }} dimension</p>
+            </div>
+            
+            <div class="alert alert-info">
+                <strong>Editing:</strong> {{ question_id }} in {{ dimension }} dimension
+            </div>
+            
+            <form method="POST" id="questionForm">
+                <input type="hidden" name="original_question_id" value="{{ question_id }}">
+                
+                <div class="form-group">
+                    <label class="form-label" for="dimension">Dimension</label>
+                    <select name="dimension" id="dimension" class="form-control" disabled>
+                        <option value="{{ dimension }}" selected>{{ dimension.replace('_', ' ').title() }}</option>
+                    </select>
+                    <input type="hidden" name="dimension" value="{{ dimension }}">
+                    <div class="form-text">Dimension cannot be changed when editing</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="question_id">Question ID</label>
+                    <input type="text" name="question_id" id="question_id" class="form-control" 
+                           value="{{ question_id }}" readonly style="background-color: #f8f9fa;">
+                    <div class="form-text">Question ID cannot be changed when editing</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="title">Question Title *</label>
+                    <input type="text" name="title" id="title" class="form-control" required
+                           value="{{ question_data.title }}">
+                    <div class="form-text">The question text shown to users</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="help_text">Help Text</label>
+                    <textarea name="help_text" id="help_text" class="form-control" rows="2">{{ question_data.get('help_text', '') }}</textarea>
+                    <div class="form-text">Optional explanation to help users understand the question</div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="required" id="required" value="true" {{ 'checked' if question_data.get('required', False) else '' }}>
+                        <label class="form-label" for="required">Required Question</label>
+                    </div>
+                    <div class="form-text">Whether users must answer this question</div>
+                </div>
+                
+                <div class="options-section">
+                    <div class="options-header">Answer Options *</div>
+                    <div id="optionsContainer">
+                        {% for option_key, option_data in question_data.options.items() %}
+                        <div class="option-row">
+                            <div>
+                                <label class="form-label">Option Key *</label>
+                                <input type="text" name="option_keys[]" class="form-control" 
+                                       value="{{ option_key }}" required>
+                            </div>
+                            <div>
+                                <label class="form-label">Option Title *</label>
+                                <input type="text" name="option_titles[]" class="form-control" 
+                                       value="{{ option_data.title }}" required>
+                            </div>
+                            <div>
+                                <label class="form-label">Risk Score (1-4) *</label>
+                                <input type="number" name="option_scores[]" class="form-control" min="1" max="4" 
+                                       value="{{ scoring_data.get('scoring', {}).get(option_key, 1) }}" required>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-danger" onclick="removeOption(this)">Remove</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-success" onclick="addOption()">Add Another Option</button>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="reasoning_prompt">Reasoning Prompt</label>
+                    <input type="text" name="reasoning_prompt" id="reasoning_prompt" class="form-control"
+                           value="{{ question_data.get('reasoning_prompt', '') }}">
+                    <div class="form-text">Optional prompt asking users to explain their choice</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="weight">Question Weight</label>
+                    <input type="number" name="weight" id="weight" class="form-control" 
+                           min="0.1" max="3.0" step="0.1" value="{{ scoring_data.get('weight', 1.0) }}">
+                    <div class="form-text">Importance relative to other questions (1.0 = standard)</div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Update Question</button>
+                    <a href="{{ url_for('admin.questions_list') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        function addOption() {
+            const container = document.getElementById('optionsContainer');
+            const newOption = document.createElement('div');
+            newOption.className = 'option-row';
+            newOption.innerHTML = `
+                <div>
+                    <input type="text" name="option_keys[]" class="form-control" placeholder="e.g., medium" required>
+                </div>
+                <div>
+                    <input type="text" name="option_titles[]" class="form-control" placeholder="e.g., Medium Risk" required>
+                </div>
+                <div>
+                    <input type="number" name="option_scores[]" class="form-control" min="1" max="4" placeholder="2" required>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-danger" onclick="removeOption(this)">Remove</button>
+                </div>
+            `;
+            container.appendChild(newOption);
+        }
+        
+        function removeOption(button) {
+            const optionsContainer = document.getElementById('optionsContainer');
+            if (optionsContainer.children.length > 2) {
+                button.closest('.option-row').remove();
+            } else {
+                alert('You must have at least 2 options.');
+            }
+        }
+    </script>
+</body>
+</html>
+        """
+        
+        return render_template_string(
+            template,
+            dimension=dimension,
+            question_id=question_id,
+            question_data=question_data,
+            scoring_data=scoring_data
+        )
+    
+    def _handle_edit_question_post(self, dimension: str, question_id: str):
+        """Handle POST request for editing a question"""
+        try:
+            # Extract form data
+            original_question_id = request.form.get('original_question_id')
+            title = request.form.get('title')
+            help_text = request.form.get('help_text', '').strip()
+            required = request.form.get('required') == 'true'
+            reasoning_prompt = request.form.get('reasoning_prompt', '').strip()
+            weight = float(request.form.get('weight', 1.0))
+            
+            # Extract options
+            option_keys = request.form.getlist('option_keys[]')
+            option_titles = request.form.getlist('option_titles[]')
+            option_scores = request.form.getlist('option_scores[]')
+            
+            # Validation
+            if not all([dimension, question_id, title]) or len(option_keys) < 2:
+                flash('Please fill in all required fields and provide at least 2 options.', 'error')
+                return redirect(request.url)
+            
+            # Build question data
+            options = {}
+            scoring = {}
+            
+            for key, title_text, score in zip(option_keys, option_titles, option_scores):
+                if key.strip() and title_text.strip():
+                    options[key.strip()] = {
+                        "title": title_text.strip(),
+                        "description": ""  # Could be enhanced later
+                    }
+                    scoring[key.strip()] = int(score)
+            
+            # Update question in dimension file
+            self._update_question_in_dimension_file(dimension, question_id, {
+                'title': title,
+                'help_text': help_text,
+                'required': required,
+                'options': options,
+                'reasoning_prompt': reasoning_prompt
+            })
+            
+            # Update scoring configuration
+            self._update_question_in_scoring_file(dimension, question_id, weight, scoring)
+            
+            flash(f'Question "{title}" updated successfully!', 'success')
+            return redirect(url_for('admin.questions_list'))
+            
+        except Exception as e:
+            flash(f'Error updating question: {str(e)}', 'error')
+            return redirect(request.url)
+    
+    def _update_question_in_dimension_file(self, dimension: str, question_id: str, question_data: Dict[str, Any]):
+        """Update question in dimension YAML file"""
+        question_file = self.questions_dir / f"{dimension}.yaml"
+        
+        # Load existing data
+        data = self.load_yaml_file(question_file) if question_file.exists() else {}
+        
+        # Ensure dimension questions key exists
+        dimension_key = f"{dimension}_questions"
+        if dimension_key not in data:
+            data[dimension_key] = {}
+        
+        # Clean question data (remove empty fields)
+        clean_question_data = {
+            "title": question_data["title"],
+            "required": question_data["required"],
+            "options": question_data["options"]
+        }
+        
+        if question_data.get("help_text"):
+            clean_question_data["help_text"] = question_data["help_text"]
+        
+        if question_data.get("reasoning_prompt"):
+            clean_question_data["reasoning_prompt"] = question_data["reasoning_prompt"]
+        
+        # Update question
+        data[dimension_key][question_id] = clean_question_data
+        
+        # Save file
+        self.save_yaml_file(question_file, data)
+    
+    def _update_question_in_scoring_file(self, dimension: str, question_id: str, weight: float, scoring: Dict[str, int]):
+        """Update question scoring in flexible scoring file"""
+        scoring_data = self.get_scoring_config()
+        
+        # Ensure structure exists
+        if "dimensions" not in scoring_data:
+            scoring_data["dimensions"] = {}
+        
+        if dimension not in scoring_data["dimensions"]:
+            scoring_data["dimensions"][dimension] = {
+                "aggregation": "weighted_average",
+                "questions": {}
+            }
+        
+        if "questions" not in scoring_data["dimensions"][dimension]:
+            scoring_data["dimensions"][dimension]["questions"] = {}
+        
+        # Update question scoring
+        scoring_data["dimensions"][dimension]["questions"][question_id] = {
+            "weight": weight,
+            "scoring": scoring
+        }
+        
+        # Save file
+        self.save_yaml_file(self.scoring_file, scoring_data)
     
     def delete_question(self, dimension: str, question_id: str):
         """Delete a question"""
