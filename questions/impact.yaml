@@ -32,3 +32,15 @@ impact_questions:
         description: This is a description for impact answer 2
     help_text: This is an impact test question
     reasoning_prompt: Please explain
+  impact_3:
+    title: Impact question number 3!
+    required: true
+    options:
+      imp31:
+        title: impact 3 1
+        description: impact 3 description
+      imp32:
+        title: impact 3 2
+        description: impact 3 answer 2
+    help_text: Testing 3rd impact
+    reasoning_prompt: lease explain

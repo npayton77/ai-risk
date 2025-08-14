@@ -25,10 +25,21 @@ autonomy_questions:
     options:
       low_auto:
         title: Low Autonomy Test
-        description: 'AI requires approval for most decisions'
+        description: AI requires approval for most decisions
       high_auto:
-        title: High Autonomy Test  
-        description: 'AI can make decisions independently'
+        title: High Autonomy Test
+        description: AI can make decisions independently
     help_text: This is a test question to verify multiple questions work
     reasoning_prompt: Why did you choose this autonomy level?
-
+  auto_3:
+    title: Autonomy question 3
+    required: true
+    options:
+      auto31:
+        title: Auto 3 1
+        description: Auto 3 descrition 1
+      auto32:
+        title: Auto 3 2
+        description: Auto 3 description 2
+    help_text: Added third autonomy question
+    reasoning_prompt: Please explain

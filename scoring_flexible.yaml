@@ -42,6 +42,11 @@ dimensions:
           auto2: 2
           auto3: 3
           auto4: 4
+      auto_3:
+        weight: 1.0
+        scoring:
+          auto31: 1
+          auto32: 2
   oversight:
     aggregation: max
     questions:
@@ -72,6 +77,11 @@ dimensions:
         scoring:
           imp1: 1
           imp2: 4
+      impact_3:
+        weight: 1.0
+        scoring:
+          imp31: 1
+          imp32: 2
   orchestration:
     aggregation: max
     questions:

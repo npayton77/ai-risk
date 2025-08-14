@@ -27,8 +27,8 @@ scoring:
     
     data_sensitivity:
       public: 1
-      internal: 2
-      confidential: 3
+      internal: 1
+      confidential: 2
       regulated: 4
 
   # Risk level thresholds based on total score (5-20 range with new data sensitivity dimension)
