@@ -4,7 +4,7 @@
 autonomy_questions:
   # Original autonomy question
   autonomy:
-    title: "🎯 Autonomy Level: How much decision-making power does the AI have?"
+    title: "Autonomy Level: How much decision-making power does the AI have?"
     help_text: "Consider who makes the final decisions in your workflow"
     required: true
     options:
@@ -24,7 +24,7 @@ autonomy_questions:
 
   # NEW: Additional autonomy question about scope
   autonomy_scope:
-    title: "🎯 Decision Scope: What range of decisions can the AI make?"
+    title: "Decision Scope: What range of decisions can the AI make?"
     help_text: "Consider the breadth of decisions the AI is authorized to make"
     required: true
     options:
@@ -44,7 +44,7 @@ autonomy_questions:
 
   # NEW: Additional autonomy question about frequency
   autonomy_frequency:
-    title: "🎯 Decision Frequency: How often does the AI make autonomous decisions?"
+    title: "Decision Frequency: How often does the AI make autonomous decisions?"
     help_text: "Consider how frequently the AI acts without human intervention"
     required: true
     options:

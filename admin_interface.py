@@ -246,15 +246,15 @@ class AdminInterface:
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎯 AI Risk Assessment</h1>
+            <h1>AI Risk Assessment</h1>
             <p>Admin Dashboard</p>
             
             <div class="nav-links">
-                <a href="{{ url_for('admin.questions_list') }}">📋 Manage Questions</a>
-                <a href="{{ url_for('admin.add_question') }}">➕ Add Question</a>
-                <a href="{{ url_for('admin.scoring_editor') }}">⚖️ Scoring Config</a>
-                <a href="{{ url_for('admin.validate_config') }}">✅ Validate</a>
-                <a href="{{ url_for('index') }}">🏠 Back to App</a>
+                <a href="{{ url_for('admin.questions_list') }}">Manage Questions</a>
+                <a href="{{ url_for('admin.add_question') }}">Add Question</a>
+                <a href="{{ url_for('admin.scoring_editor') }}">Scoring Config</a>
+                <a href="{{ url_for('admin.validate_config') }}">Validate</a>
+                <a href="{{ url_for('index') }}">Back to App</a>
             </div>
         </div>
         
@@ -444,10 +444,10 @@ class AdminInterface:
 <body>
     <div class="container">
         <div class="header">
-            <h1>📋 Question Management</h1>
+            <h1>Question Management</h1>
             <div class="header-actions">
-                <a href="{{ url_for('admin.add_question') }}" class="btn btn-primary">➕ Add Question</a>
-                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">🏠 Dashboard</a>
+                <a href="{{ url_for('admin.add_question') }}" class="btn btn-primary">Add Question</a>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Dashboard</a>
             </div>
         </div>
         
@@ -684,7 +684,7 @@ class AdminInterface:
     <div class="container">
         <div class="form-card">
             <div class="form-header">
-                <h1>➕ Add New Question</h1>
+                <h1>Add New Question</h1>
                 <p>Create a new question for the AI Risk Assessment</p>
             </div>
             
@@ -874,7 +874,7 @@ class AdminInterface:
             option_scores = request.form.getlist('option_scores[]')
             
             # DEBUG: Log all submitted form data
-            print(f"\n🔍 DEBUG - ADD QUESTION FORM DATA:")
+            print(f"\nDEBUG - ADD QUESTION FORM DATA:")
             print(f"  Dimension: {dimension}")
             print(f"  Question ID: {question_id}")
             print(f"  Title: {title}")
@@ -887,7 +887,7 @@ class AdminInterface:
             print(f"  Option Descriptions: {option_descriptions}")
             print(f"  Option Scores: {option_scores}")
             print(f"  Full Form Data: {dict(request.form)}")
-            print(f"🔍 END DEBUG\n")
+            print(f"END DEBUG\n")
             
             # Validation
             if not all([dimension, question_id, title]) or len(option_keys) < 2:
@@ -916,8 +916,8 @@ class AdminInterface:
                     scoring[key.strip()] = int(score)
             
             # DEBUG: Log what options and scoring structures get created
-            print(f"🔍 DEBUG - OPTIONS STRUCTURE CREATED: {options}")
-            print(f"🔍 DEBUG - SCORING STRUCTURE CREATED: {scoring}")
+            print(f"DEBUG - OPTIONS STRUCTURE CREATED: {options}")
+            print(f"DEBUG - SCORING STRUCTURE CREATED: {scoring}")
             
             # Add question to dimension file
             self._add_question_to_dimension_file(dimension, question_id, {
@@ -1165,7 +1165,7 @@ class AdminInterface:
     <div class="container">
         <div class="form-card">
             <div class="form-header">
-                <h1>✏️ Edit Question</h1>
+                <h1>Edit Question</h1>
                 <p>Modify question in {{ dimension.replace('_', ' ').title() }} dimension</p>
             </div>
             
@@ -1327,7 +1327,7 @@ class AdminInterface:
             option_scores = request.form.getlist('option_scores[]')
             
             # DEBUG: Log all submitted form data
-            print(f"\n🔍 DEBUG - EDIT QUESTION FORM DATA:")
+            print(f"\nDEBUG - EDIT QUESTION FORM DATA:")
             print(f"  Dimension: {dimension}")
             print(f"  Question ID: {question_id}")
             print(f"  Original Question ID: {original_question_id}")
@@ -1340,7 +1340,7 @@ class AdminInterface:
             print(f"  Option Titles: {option_titles}")
             print(f"  Option Scores: {option_scores}")
             print(f"  Full Form Data: {dict(request.form)}")
-            print(f"🔍 END DEBUG\n")
+            print(f"END DEBUG\n")
             
             # Validation
             if not all([dimension, question_id, title]) or len(option_keys) < 2:

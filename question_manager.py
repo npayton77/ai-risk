@@ -49,7 +49,7 @@ def list_questions():
     questions_dir = Path("questions")
     dimensions = ["autonomy", "oversight", "impact", "orchestration", "data_sensitivity"]
     
-    print("🎯 AI Risk Assessment - Current Questions\n")
+    print("AI Risk Assessment - Current Questions\n")
     
     total_questions = 0
     
@@ -84,7 +84,7 @@ def validate_questions():
     import yaml
     from pathlib import Path
     
-    print("🔍 Validating question files...\n")
+    print("Validating question files...\n")
     
     questions_dir = Path("questions")
     scoring_file = Path("scoring_flexible.yaml")
@@ -144,19 +144,19 @@ def validate_questions():
     
     # Report results
     if errors:
-        print("❌ Errors found:")
+        print("Errors found:")
         for error in errors:
             print(f"   • {error}")
         print()
     
     if warnings:
-        print("⚠️  Warnings:")
+        print("Warnings:")
         for warning in warnings:
             print(f"   • {warning}")
         print()
     
     if not errors and not warnings:
-        print("✅ All question files are valid!")
+        print("All question files are valid!")
     else:
         print(f"Validation complete: {len(errors)} errors, {len(warnings)} warnings")
 

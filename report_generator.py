@@ -31,11 +31,11 @@ class ReportGenerator:
     def get_dimension_title(self, dimension: str) -> str:
         """Get title for dimension"""
         dimension_titles = {
-            'autonomy': '🎯 Autonomy Level',
-            'oversight': '🔍 Human Oversight', 
-            'impact': '📊 Output Impact',
-            'orchestration': '🔧 Orchestration',
-            'data_sensitivity': '🔒 Data Sensitivity'
+            'autonomy': 'Autonomy Level',
+            'oversight': 'Human Oversight', 
+            'impact': 'Output Impact',
+            'orchestration': 'Orchestration',
+            'data_sensitivity': 'Data Sensitivity'
         }
         return dimension_titles.get(dimension, dimension.title())
 
@@ -794,12 +794,12 @@ class ReportGenerator:
         <!-- Footer -->
         <div class="report-footer">
             <div class="footer-content">
-                <div class="footer-logo">🤖 AI Risk Assessment Tool</div>
+                <div class="footer-logo">AI Risk Assessment Tool</div>
                 <div class="footer-timestamp">Generated on {assessment.date}</div>
             </div>
             <div style="text-align: center; margin-top: 20px;">
                 <a href="/" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none; font-weight: bold; display: inline-block; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                    🔄 New Assessment
+                    New Assessment
                 </a>
             </div>
         </div>

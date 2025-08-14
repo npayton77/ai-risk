@@ -254,7 +254,7 @@
                 
                 <!-- Autonomy Level -->
                 <div class="form-group">
-                    <label>🎯 Autonomy Level: How much decision-making power does the AI have? *</label>
+                    <label>Autonomy Level: How much decision-making power does the AI have? *</label>
                     <div class="help-text">
                         Consider who makes the final decisions in your workflow
                     </div>
@@ -285,7 +285,7 @@
                 
                 <!-- Human Oversight -->
                 <div class="form-group">
-                    <label>🔍 Human Oversight: What level of human involvement exists in the process? *</label>
+                    <label>Human Oversight: What level of human involvement exists in the process? *</label>
                     <div class="help-text">
                         Consider when and how humans can intervene in the AI process
                     </div>
@@ -316,7 +316,7 @@
                 
                 <!-- Output Impact -->
                 <div class="form-group">
-                    <label>📊 Output Impact: What is the consequence level of AI decisions/outputs? *</label>
+                    <label>Output Impact: What is the consequence level of AI decisions/outputs? *</label>
                     <div class="help-text">
                         Think about the worst-case scenario if AI makes a mistake
                     </div>
@@ -347,7 +347,7 @@
                 
                 <!-- Orchestration Type -->
                 <div class="form-group">
-                    <label>🔧 Orchestration: How are AI agents coordinated in this workflow? *</label>
+                    <label>Orchestration: How are AI agents coordinated in this workflow? *</label>
                     <div class="help-text">
                         Consider the AI architecture and how multiple systems interact
                     </div>
@@ -463,10 +463,10 @@
                     };
                     
                     const riskEmojis = {
-                        'low': '🟢',
-                        'medium': '🟡',
-                        'high': '🔴',
-                        'critical': '🟣'
+                        'low': '[LOW]',
+                        'medium': '[MED]',
+                        'high': '[HIGH]',
+                        'critical': '[CRIT]'
                     };
                     
                     resultContent.innerHTML = `
@@ -485,8 +485,8 @@
                             </p>
                         </div>
                         <p>Your detailed risk assessment report has been generated with specific recommendations for this risk level.</p>
-                        <button class="download-btn" onclick="downloadReport()">📄 Download Full Report</button>
-                        <button class="download-btn" onclick="location.reload()" style="background: #667eea; margin-left: 10px;">🔄 New Assessment</button>
+                        <button class="download-btn" onclick="downloadReport()">Download Full Report</button>
+                        <button class="download-btn" onclick="location.reload()" style="background: #667eea; margin-left: 10px;">New Assessment</button>
                     `;
                     
                     result.className = 'result success';

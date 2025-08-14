@@ -59,7 +59,7 @@ class FlexibleAIRiskAssessor:
         question_config = questions_config.get(question_id, {})
         
         # DEBUG: Show scoring lookup
-        print(f"🔍 DEBUG - SCORING LOOKUP:")
+        print(f"DEBUG - SCORING LOOKUP:")
         print(f"  Dimension: {dimension}")
         print(f"  Question ID: {question_id}")
         print(f"  Answer: {answer}")
@@ -67,7 +67,7 @@ class FlexibleAIRiskAssessor:
         print(f"  Question config found: {bool(question_config)}")
         if question_config:
             print(f"  Scoring options: {question_config.get('scoring', {})}")
-        print(f"🔍 END DEBUG")
+        print(f"END DEBUG")
         
         # Get scoring for this specific question
         scoring = question_config.get('scoring', {})
@@ -91,7 +91,7 @@ class FlexibleAIRiskAssessor:
         questions_config = dimension_config.get('questions', {})
         
         # DEBUG: Show aggregation details
-        print(f"\n🔍 DEBUG - AGGREGATING {dimension.upper()}:")
+        print(f"\nDEBUG - AGGREGATING {dimension.upper()}:")
         print(f"  Question Scores: {question_scores}")
         print(f"  Aggregation Method: {aggregation}")
         print(f"  Questions Config: {questions_config}")
@@ -124,7 +124,7 @@ class FlexibleAIRiskAssessor:
             
             final_score = total_weighted_score / total_weight if total_weight > 0 else 0.0
             print(f"  Final Score: {total_weighted_score}/{total_weight} = {final_score}")
-            print(f"🔍 END DEBUG\n")
+            print(f"END DEBUG\n")
             return final_score
         
         elif aggregation == 'max':
@@ -133,11 +133,11 @@ class FlexibleAIRiskAssessor:
             if actual_scores:
                 max_score = max(actual_scores)
                 print(f"  Maximum Score: {max_score}")
-                print(f"🔍 END DEBUG\n")
+                print(f"END DEBUG\n")
                 return max_score
             else:
                 print(f"  No actual questions found, returning 0.0")
-                print(f"🔍 END DEBUG\n")
+                print(f"END DEBUG\n")
                 return 0.0
         
         elif aggregation == 'min':
@@ -203,7 +203,7 @@ class FlexibleAIRiskAssessor:
         rounded_score = round(score)
         
         # DEBUG: Show risk calculation
-        print(f"\n🔍 DEBUG - RISK LEVEL CALCULATION:")
+        print(f"\nDEBUG - RISK LEVEL CALCULATION:")
         print(f"  Total Score: {score}")
         print(f"  Rounded Score: {rounded_score}")
         print(f"  Risk Thresholds: {self.risk_thresholds}")
@@ -211,19 +211,19 @@ class FlexibleAIRiskAssessor:
         for level, config in self.risk_thresholds.items():
             print(f"  Checking {level}: {config['min']} <= {rounded_score} <= {config['max']} = {config['min'] <= rounded_score <= config['max']}")
             if config['min'] <= rounded_score <= config['max']:
-                print(f"  ✅ Matched: {config['level']}")
-                print(f"🔍 END DEBUG\n")
+                print(f"  Matched: {config['level']}")
+                print(f"END DEBUG\n")
                 return config['level']
         
         # Handle scores below the minimum threshold
         min_threshold = min(config['min'] for config in self.risk_thresholds.values())
         if rounded_score < min_threshold:
-            print(f"  ✅ Score {rounded_score} below minimum threshold {min_threshold}, returning 'low'")
-            print(f"🔍 END DEBUG\n")
+            print(f"  Score {rounded_score} below minimum threshold {min_threshold}, returning 'low'")
+            print(f"END DEBUG\n")
             return 'low'
         
-        print(f"  ❌ No threshold matched, returning 'unknown'")
-        print(f"🔍 END DEBUG\n")
+        print(f"  No threshold matched, returning 'unknown'")
+        print(f"END DEBUG\n")
         return 'unknown'
 
     def get_recommendations(self, risk_level: str) -> List[str]:

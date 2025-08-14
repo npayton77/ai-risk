@@ -128,17 +128,11 @@ def process_step_submission(step_number):
             if question_config.get('_dimension') == step_key:
                 step_questions.append(question_id)
         
-        # DEBUG: Show what questions we found for this step
-        print(f"\n🔍 DEBUG - STEP {step_number} ({step_key}) QUESTIONS: {step_questions}")
-        print(f"🔍 DEBUG - FORM DATA: {dict(request.form)}")
-        
         # Process each question in this step
         step_has_answers = False
         for question_id in step_questions:
             question_value = request.form.get(question_id, '').strip()
             reasoning_value = request.form.get(f'{question_id}_reasoning', '').strip()
-            
-            print(f"🔍 DEBUG - Processing {question_id}: value='{question_value}', reasoning='{reasoning_value}'")
             
             if question_value:
                 session['assessment_data'][question_id] = question_value
@@ -151,8 +145,6 @@ def process_step_submission(step_number):
         
         if not errors:
             session.modified = True
-        
-        print(f"🔍 END DEBUG\n")
 
     
     # Handle validation errors
@@ -171,12 +163,6 @@ def generate_final_assessment():
     """Generate the final assessment report from session data"""
     try:
         assessment_data = session.get('assessment_data', {})
-        
-        # DEBUG: Log all assessment data
-        print(f"\n🔍 DEBUG - FINAL ASSESSMENT DATA:")
-        for key, value in assessment_data.items():
-            print(f"  {key}: {value}")
-        print(f"🔍 END DEBUG\n")
         
         # Validate basic required data
         basic_required = ['workflow_name', 'assessor']
@@ -435,22 +421,22 @@ def view_report(session_id):
             <!-- Email Dropdown -->
             <div class="email-dropdown" style="position: relative;">
                 <button onclick="toggleEmailMenu()" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 12px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(52,152,219,0.3); transition: all 0.3s ease; font-size: 14px; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(52,152,219,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(52,152,219,0.3)'">
-                    📧 Email Report <span id="email-arrow">▼</span>
+                    Email Report <span id="email-arrow">▼</span>
                 </button>
                 <div id="email-menu" style="position: absolute; top: 100%; right: 0; background: white; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.2); overflow: hidden; min-width: 250px; z-index: 1001; display: none;">
                     <button onclick="quickEmail()" style="width: 100%; padding: 15px; border: none; background: white; text-align: left; cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
-                        <strong>📧 Quick Email</strong><br>
+                        <strong>Quick Email</strong><br>
                         <small style="color: #666;">Send short summary via email client</small>
                     </button>
                     <button onclick="downloadForEmail()" style="width: 100%; padding: 15px; border: none; background: white; text-align: left; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
-                        <strong>📎 Download for Attachment</strong><br>
+                        <strong>Download for Attachment</strong><br>
                         <small style="color: #666;">Download HTML file to attach to email</small>
                     </button>
                 </div>
             </div>
             
             <button onclick="location.href='/'" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; padding: 12px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(39,174,96,0.3); transition: all 0.3s ease; font-size: 14px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(39,174,96,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(39,174,96,0.3)'">
-                🔄 New Assessment
+                New Assessment
             </button>
         </div>
         
@@ -609,7 +595,7 @@ if __name__ == '__main__':
     # Test loading questions to ensure they're valid
     try:
         questions_config = questions_loader.load_all_questions()
-        print(f"✅ Successfully loaded {len(questions_config['questions'])} question categories from {questions_dir}/ directory")
+        print(f"Successfully loaded {len(questions_config['questions'])} question categories from {questions_dir}/ directory")
     except Exception as e:
         print(f"Error: Failed to load questions from {questions_dir}/ directory: {e}")
         exit(1)
@@ -619,18 +605,18 @@ if __name__ == '__main__':
     print("- questions/ directory: Individual question files for each assessment dimension")
     print("- scoring.yaml: Risk scoring and recommendations")
     print("✨ New Multi-Step Wizard Features:")
-    print("🧭 Step-by-step guided assessment")
-    print("📊 Progress tracking with visual indicators")
-    print("💾 Session-based data persistence")
-    print("🔄 Forward/backward navigation")
-    print("✅ Per-step validation")
+    print("Step-by-step guided assessment")
+    print("Progress tracking with visual indicators")
+    print("Session-based data persistence")
+    print("Forward/backward navigation")
+    print("Per-step validation")
     print("Other features:")
-    print("✅ HTML report generation: Enabled")
-    print("📧 Email report functionality (mailto: links)")
-    print("🎨 Modern UI enhancements")
+    print("HTML report generation: Enabled")
+    print("Email report functionality (mailto: links)")
+    print("Modern UI enhancements")
     print("")
-    print("🚀 Multi-Step Assessment: http://localhost:9000")
-    print("📄 Legacy Single-Page: http://localhost:9000/single-page")  
-    print("🔧 System info: http://localhost:9000/system_info")
-    print("📧 Email info: http://localhost:9000/email_info")
+    print("Multi-Step Assessment: http://localhost:9000")
+    print("Legacy Single-Page: http://localhost:9000/single-page")  
+    print("System info: http://localhost:9000/system_info")
+    print("Email info: http://localhost:9000/email_info")
     app.run(debug=True, host='0.0.0.0', port=9000) 

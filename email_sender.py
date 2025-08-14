@@ -122,14 +122,14 @@ class EmailSender:
         }
         
         risk_emojis = {
-            'low': '🟢',
-            'medium': '🟡',
-            'high': '🔴',
-            'critical': '🟣'
+            'low': '[LOW]',
+            'medium': '[MED]',
+            'high': '[HIGH]',
+            'critical': '[CRIT]'
         }
         
         risk_color = risk_colors.get(risk_level, '#f39c12')
-        risk_emoji = risk_emojis.get(risk_level, '🟡')
+        risk_emoji = risk_emojis.get(risk_level, '[MED]')
         
         return f"""
         <!DOCTYPE html>
@@ -158,7 +158,7 @@ class EmailSender:
                     </div>
                     
                     <div style="background: #f8f9fa; border-radius: 10px; padding: 25px; margin-bottom: 30px;">
-                        <h3 style="color: #2c3e50; margin: 0 0 15px 0; font-size: 18px;">📊 Assessment Summary</h3>
+                        <h3 style="color: #2c3e50; margin: 0 0 15px 0; font-size: 18px;">Assessment Summary</h3>
                         <p style="margin: 0; color: #6c757d; line-height: 1.6;">
                             Your AI system "<strong>{assessment_name}</strong>" has been assessed and classified as 
                             <strong style="color: {risk_color};">{risk_level.upper()} RISK</strong>.
@@ -170,7 +170,7 @@ class EmailSender:
                     </div>
                     
                     <div style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-radius: 10px; padding: 25px; margin-bottom: 30px;">
-                        <h3 style="color: #2c3e50; margin: 0 0 15px 0; font-size: 18px;">📋 Next Steps</h3>
+                        <h3 style="color: #2c3e50; margin: 0 0 15px 0; font-size: 18px;">Next Steps</h3>
                         <ul style="margin: 0; padding-left: 20px; color: #4a5568; line-height: 1.8;">
                             <li>Review the detailed risk assessment report (attached)</li>
                             <li>Implement the recommended risk mitigation strategies</li>
@@ -189,7 +189,7 @@ class EmailSender:
                 <!-- Footer -->
                 <div style="background: #2c3e50; color: white; padding: 20px; text-align: center;">
                     <p style="margin: 0; font-size: 14px;">
-                        🤖 <strong>AI Risk Assessment Tool</strong>
+                        <strong>AI Risk Assessment Tool</strong>
                     </p>
                     <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.8;">
                         Helping organizations deploy AI responsibly

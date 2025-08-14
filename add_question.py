@@ -24,19 +24,19 @@ class Colors:
 
 def print_header(text: str):
     """Print a colored header"""
-    print(f"\n{Colors.BOLD}{Colors.BLUE}🎯 {text}{Colors.END}")
+    print(f"\n{Colors.BOLD}{Colors.BLUE}{text}{Colors.END}")
 
 def print_success(text: str):
     """Print a success message"""
-    print(f"{Colors.GREEN}✅ {text}{Colors.END}")
+    print(f"{Colors.GREEN}{text}{Colors.END}")
 
 def print_error(text: str):
     """Print an error message"""
-    print(f"{Colors.RED}❌ {text}{Colors.END}")
+    print(f"{Colors.RED}{text}{Colors.END}")
 
 def print_warning(text: str):
     """Print a warning message"""
-    print(f"{Colors.YELLOW}⚠️  {text}{Colors.END}")
+    print(f"{Colors.YELLOW}{text}{Colors.END}")
 
 def get_input(prompt: str, default: str = None) -> str:
     """Get user input with optional default"""
@@ -330,8 +330,8 @@ class QuestionBuilder:
             print(f"  {key}: {option['title']} (risk score: {score})")
         
         print(f"\n{Colors.BOLD}Files Updated:{Colors.END}")
-        print(f"  ✅ questions/{question_data['dimension']}.yaml")
-        print(f"  ✅ scoring_flexible.yaml")
+        print(f"  questions/{question_data['dimension']}.yaml")
+        print(f"  scoring_flexible.yaml")
         
         print(f"\n{Colors.GREEN}🎉 Ready to test! Run your Flask app and try the new question.{Colors.END}")
     

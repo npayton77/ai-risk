@@ -15,12 +15,12 @@ class MultiStepTemplateGenerator:
         
         # Define the step order and configuration
         self.steps = [
-            {'key': 'basic_info', 'title': '📋 Assessment Information', 'subtitle': 'Basic details about your assessment'},
-            {'key': 'autonomy', 'title': '🎯 Autonomy Level', 'subtitle': 'How much decision-making power does the AI have?'},
-            {'key': 'oversight', 'title': '🔍 Human Oversight', 'subtitle': 'What level of human involvement exists?'},
-            {'key': 'impact', 'title': '📊 Output Impact', 'subtitle': 'What are the consequences of AI decisions?'},
-            {'key': 'orchestration', 'title': '🔧 Orchestration', 'subtitle': 'How are AI agents coordinated?'},
-            {'key': 'data_sensitivity', 'title': '🔒 Data Sensitivity', 'subtitle': 'What type of data does the AI process?'}
+            {'key': 'basic_info', 'title': 'Assessment Information', 'subtitle': 'Basic details about your assessment'},
+            {'key': 'autonomy', 'title': 'Autonomy Level', 'subtitle': 'How much decision-making power does the AI have?'},
+            {'key': 'oversight', 'title': 'Human Oversight', 'subtitle': 'What level of human involvement exists?'},
+            {'key': 'impact', 'title': 'Output Impact', 'subtitle': 'What are the consequences of AI decisions?'},
+            {'key': 'orchestration', 'title': 'Orchestration', 'subtitle': 'How are AI agents coordinated?'},
+            {'key': 'data_sensitivity', 'title': 'Data Sensitivity', 'subtitle': 'What type of data does the AI process?'}
         ]
         
         self.total_steps = len(self.steps)
@@ -76,7 +76,7 @@ class MultiStepTemplateGenerator:
                 </div>
                 
                 <div class="info-box">
-                    <h4>🚀 Welcome to the AI Risk Assessment</h4>
+                    <h4>Welcome to the AI Risk Assessment</h4>
                     <p>This assessment will guide you through 5 key dimensions to evaluate your AI system's risk level:</p>
                     <ul>
                         <li><strong>Autonomy:</strong> Decision-making independence</li>
@@ -252,7 +252,7 @@ class MultiStepTemplateGenerator:
         else:
             buttons.append('''
                 <button type="submit" class="nav-btn generate-btn">
-                    🚀 Generate Risk Assessment
+                    Generate Risk Assessment
                 </button>
             ''')
         
@@ -270,7 +270,7 @@ class MultiStepTemplateGenerator:
             steps_html += f'''
                 <div class="progress-step {status}">
                     <div class="step-number">{i}</div>
-                    <div class="step-label">{step_config['title'].split()[1]}</div>
+                    <div class="step-label">{step_config['title'].split()[0]}</div>
                 </div>
             '''
         
@@ -308,7 +308,7 @@ class MultiStepTemplateGenerator:
             <h1>{step_config['title']}</h1>
             <div class="subtitle">{step_config['subtitle']}</div>
             <div class="admin-link">
-                <a href="/admin" style="color: #667eea; text-decoration: none; font-size: 0.9rem; opacity: 0.7;">⚙️ Admin</a>
+                <a href="/admin" style="color: #667eea; text-decoration: none; font-size: 0.9rem; opacity: 0.7;">Admin</a>
             </div>
         </div>
         
