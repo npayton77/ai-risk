@@ -1,19 +1,19 @@
 data_sensitivity_questions:
   data_sensitivity:
-    title: "🔒 Data Sensitivity: What type of data does the AI process?"
-    help_text: "Consider the most sensitive data the AI will have access to"
+    title: "\U0001F512 Data Sensitivity: What type of data does the AI process?"
     required: true
     options:
       public:
-        title: "Public"
-        description: "Publicly available information - open datasets, published reports"
+        title: Public
+        description: ''
       internal:
-        title: "Internal"
-        description: "Company internal data - employee records, business metrics"
+        title: Internal
+        description: ''
       confidential:
-        title: "Confidential"
-        description: "Sensitive business data - financial records, strategic plans"
+        title: Confidential
+        description: ''
       regulated:
-        title: "Highly Confidential"
-        description: "Legally protected data - PII, financial transactions"
-    reasoning_prompt: "What's the most sensitive data involved? (Optional)"
+        title: Highly Confidential
+        description: ''
+    help_text: Consider the most sensitive data the AI will have access to
+    reasoning_prompt: What's the most sensitive data involved? (Optional)

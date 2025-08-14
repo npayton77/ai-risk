@@ -1,6 +1,6 @@
 dimensions:
   autonomy:
-    aggregation: weighted_average
+    aggregation: max
     questions:
       autonomy:
         weight: 1.0
@@ -23,9 +23,27 @@ dimensions:
           occasionally: 2
           frequently: 3
           continuously: 4
-
+      autonomy_test:
+        weight: 1.0
+        scoring:
+          low_auto: 1
+          high_auto: 3
+      autonomy_one:
+        weight: 1.0
+        scoring:
+          auto1: 1
+          auto2: 2
+          auto3: 3
+          auto4: 4
+      auto_one:
+        weight: 1.0
+        scoring:
+          auto1: 1
+          auto2: 2
+          auto3: 3
+          auto4: 4
   oversight:
-    aggregation: weighted_average
+    aggregation: max
     questions:
       oversight:
         weight: 1.0
@@ -34,8 +52,13 @@ dimensions:
           checkpoint: 2
           exception: 3
           minimal: 4
+      over_1:
+        weight: 1.0
+        scoring:
+          over1: 1
+          over2: 3
   impact:
-    aggregation: weighted_average
+    aggregation: max
     questions:
       impact:
         weight: 1.0
@@ -44,8 +67,13 @@ dimensions:
           operational: 2
           strategic: 3
           external: 4
+      impact_1:
+        weight: 1.0
+        scoring:
+          imp1: 1
+          imp2: 4
   orchestration:
-    aggregation: weighted_average
+    aggregation: max
     questions:
       orchestration:
         weight: 1.0
@@ -54,15 +82,22 @@ dimensions:
           sequential: 2
           parallel: 3
           hierarchical: 4
+      orchestration_test:
+        weight: 1.0
+        scoring:
+          sequential: 2
+          parallel: 3
+          hierarchical: 4
+          autonomous: 4
   data_sensitivity:
-    aggregation: weighted_average
+    aggregation: max
     questions:
       data_sensitivity:
         weight: 1.0
         scoring:
           public: 1
-          internal: 2
-          confidential: 3
+          internal: 1
+          confidential: 2
           regulated: 4
 risk_thresholds:
   low:

@@ -1,19 +1,40 @@
 orchestration_questions:
   orchestration:
-    title: "🔧 Orchestration: How are AI agents coordinated in this workflow?"
-    help_text: "Consider the AI architecture and how multiple systems interact"
+    title: "\U0001F527 Orchestration: How are AI agents coordinated in this workflow?"
+    help_text: Consider the AI architecture and how multiple systems interact
     required: true
     options:
       single:
-        title: "Single"
-        description: "One AI system operating independently - just one AI doing one job"
+        title: Single
+        description: One AI system operating independently - just one AI doing one
+          job
       sequential:
-        title: "Sequential"
-        description: "Chain of AI tasks in defined order - like LangChain (AI A → AI B → AI C)"
+        title: Sequential
+        description: "Chain of AI tasks in defined order - like LangChain (AI A \u2192\
+          \ AI B \u2192 AI C)"
       parallel:
-        title: "Parallel"
-        description: "Multiple AI systems working simultaneously - like AutoGen collaboration"
+        title: Parallel
+        description: Multiple AI systems working simultaneously - like AutoGen collaboration
       hierarchical:
-        title: "Hierarchical"
-        description: "AI systems managing other AI systems - Master AI controlling worker AIs"
-    reasoning_prompt: "Why did you choose this type? (Optional)"
+        title: Hierarchical
+        description: AI systems managing other AI systems - Master AI controlling
+          worker AIs
+    reasoning_prompt: Why did you choose this type? (Optional)
+  orchestration_test:
+    title: How does the AI coordinate with other systems?
+    required: true
+    options:
+      sequential:
+        title: Sequential Processing
+        description: 'AI processes tasks one after another in a defined order'
+      parallel:
+        title: Parallel Processing
+        description: 'AI handles multiple tasks simultaneously'
+      hierarchical:
+        title: Hierarchical Control
+        description: 'AI manages other AI systems in a structured hierarchy'
+      autonomous:
+        title: Autonomous Coordination
+        description: 'AI independently coordinates with other systems'
+    help_text: Consider how the AI system interacts and coordinates with other AI systems or processes
+    reasoning_prompt: Why did you choose this coordination approach?

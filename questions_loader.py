@@ -57,8 +57,13 @@ class QuestionsLoader:
                     # The file structure is: {question_key}_questions: {question_key}: {...}
                     top_level_key = f"{question_key}_questions"
                     
-                    if top_level_key in file_content and question_key in file_content[top_level_key]:
-                        combined_config['questions'][question_key] = file_content[top_level_key][question_key]
+                    if top_level_key in file_content:
+                        # Load all questions from this dimension
+                        dimension_questions = file_content[top_level_key]
+                        for q_id, q_config in dimension_questions.items():
+                            # Add dimension metadata to each question
+                            q_config['_dimension'] = question_key
+                            combined_config['questions'][q_id] = q_config
                     else:
                         print(f"Warning: Expected structure not found in {filename}")
                         

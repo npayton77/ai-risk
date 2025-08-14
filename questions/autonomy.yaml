@@ -19,4 +19,16 @@ autonomy_questions:
         description: AI manages entire workflows without oversight - humans only audit
           periodically
     reasoning_prompt: Why did you choose this level? (Optional)
+  autonomy_test:
+    title: Test Second Autonomy Question
+    required: true
+    options:
+      low_auto:
+        title: Low Autonomy Test
+        description: 'AI requires approval for most decisions'
+      high_auto:
+        title: High Autonomy Test  
+        description: 'AI can make decisions independently'
+    help_text: This is a test question to verify multiple questions work
+    reasoning_prompt: Why did you choose this autonomy level?
 

@@ -10,7 +10,8 @@ from questions_loader import questions_loader
 class MultiStepTemplateGenerator:
     def __init__(self):
         """Initialize with questions configuration"""
-        self.config = questions_loader.load_all_questions()
+        # Don't cache questions at init - load them fresh each time
+        # self.config = questions_loader.load_all_questions()
         
         # Define the step order and configuration
         self.steps = [
@@ -23,6 +24,10 @@ class MultiStepTemplateGenerator:
         ]
         
         self.total_steps = len(self.steps)
+    
+    def get_current_config(self):
+        """Get fresh questions configuration (reloads from files each time)"""
+        return questions_loader.load_all_questions()
 
     def generate_step_page(self, step_number: int, session_data: Dict = None, errors: Dict = None) -> str:
         """Generate HTML for a specific step"""
@@ -36,7 +41,7 @@ class MultiStepTemplateGenerator:
         if step_key == 'basic_info':
             content = self._generate_basic_info_content(session_data, errors)
         else:
-            content = self._generate_question_content(step_key, session_data, errors)
+            content = self._generate_dimension_content(step_key, session_data, errors)
         
         # Generate navigation buttons
         nav_buttons = self._generate_navigation_buttons(step_number)
@@ -71,7 +76,7 @@ class MultiStepTemplateGenerator:
                 </div>
                 
                 <div class="info-box">
-                    <h4>🚀 Welcome to the AI Risk Assessment Wizard!</h4>
+                    <h4>🚀 Welcome to the AI Risk Assessment</h4>
                     <p>This assessment will guide you through 5 key dimensions to evaluate your AI system's risk level:</p>
                     <ul>
                         <li><strong>Autonomy:</strong> Decision-making independence</li>
@@ -83,13 +88,104 @@ class MultiStepTemplateGenerator:
                 </div>
             </div>
         '''
+    
+    def _generate_dimension_content(self, dimension_key: str, session_data: Dict = None, errors: Dict = None) -> str:
+        """Generate content for all questions in a dimension"""
+        config = self.get_current_config()
+        
+        # Find all questions that belong to this dimension
+        dimension_questions = []
+        for question_id, question_config in config['questions'].items():
+            # Check if this question belongs to the current dimension using metadata
+            if question_config.get('_dimension') == dimension_key:
+                dimension_questions.append((question_id, question_config))
+        
+        if not dimension_questions:
+            return '<div class="error">No questions found for this dimension</div>'
+        
+        # Generate content for all questions in this dimension
+        content_parts = []
+        for question_id, question_config in dimension_questions:
+            question_content = self._generate_single_question_content(question_id, question_config, session_data, errors)
+            content_parts.append(question_content)
+        
+        # Join all questions with some spacing
+        return '<div class="dimension-questions">' + ''.join(content_parts) + '</div>'
+
+    def _generate_single_question_content(self, question_id: str, question_config: Dict, session_data: Dict = None, errors: Dict = None) -> str:
+        """Generate content for a single question"""
+        selected_value = session_data.get(question_id, '') if session_data else ''
+        reasoning_value = session_data.get(f'{question_id}_reasoning', '') if session_data else ''
+        
+        question_error = errors.get(question_id, '') if errors else ''
+        
+        # Generate radio options
+        radio_options_html = ""
+        for option_key, option_config in question_config.get('options', {}).items():
+            checked = 'checked' if selected_value == option_key else ''
+            selected_class = 'selected' if selected_value == option_key else ''
+            
+            radio_options_html += f'''
+                <div class="radio-option {selected_class}" onclick="selectRadio('{question_id}', '{option_key}')">
+                    <input type="radio" name="{question_id}" value="{option_key}" id="{question_id}_{option_key}" {checked}>
+                    <div class="radio-checkmark"></div>
+                    <div class="radio-content">
+                        <div class="radio-title">{option_config.get('title', option_key)}</div>
+                        <div class="radio-description">{option_config.get('description', '')}</div>
+                    </div>
+                </div>
+            '''
+        
+        # Generate reasoning section if specified
+        reasoning_html = ""
+        reasoning_prompt = question_config.get('reasoning_prompt', '')
+        if reasoning_prompt:
+            reasoning_html = f'''
+                <div class="reasoning-section">
+                    <label for="{question_id}_reasoning">{reasoning_prompt}</label>
+                    <textarea name="{question_id}_reasoning" id="{question_id}_reasoning" 
+                            placeholder="{reasoning_prompt}">{reasoning_value}</textarea>
+                </div>
+            '''
+        
+        # Generate help text if present
+        help_text_html = ""
+        help_text = question_config.get('help_text', '')
+        if help_text:
+            help_text_html = f'<div class="help-text">{help_text}</div>'
+        
+        # Generate error message if present
+        error_html = ""
+        if question_error:
+            error_html = f'<div class="error-message">{question_error}</div>'
+        
+        # Build the complete question HTML
+        question_title = question_config.get('title', question_id)
+        
+        return f'''
+            <div class="question-container" data-question="{question_id}">
+                <div class="question-header">
+                    <h3 class="question-title">{question_title}</h3>
+                    {help_text_html}
+                </div>
+                
+                {error_html}
+                
+                <div class="radio-group">
+                    {radio_options_html}
+                </div>
+                
+                {reasoning_html}
+            </div>
+        '''
 
     def _generate_question_content(self, question_key: str, session_data: Dict = None, errors: Dict = None) -> str:
         """Generate content for a question step"""
-        if question_key not in self.config['questions']:
+        config = self.get_current_config()
+        if question_key not in config['questions']:
             return '<div class="error">Question configuration not found</div>'
         
-        question_config = self.config['questions'][question_key]
+        question_config = config['questions'][question_key]
         selected_value = session_data.get(question_key, '') if session_data else ''
         reasoning_value = session_data.get(f'{question_key}_reasoning', '') if session_data else ''
         
@@ -247,6 +343,8 @@ class MultiStepTemplateGenerator:
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            zoom: 0.75;
+            transform-origin: top left;
         }
         
         .container {
@@ -624,6 +722,50 @@ class MultiStepTemplateGenerator:
                 width: 100%;
                 justify-content: center;
             }
+        }
+        
+        /* Styles for multiple questions per step */
+        .dimension-questions {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .question-container {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .question-header {
+            margin-bottom: 20px;
+        }
+        
+        .question-title {
+            color: #2c3e50;
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .question-container .help-text {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            border-left: 3px solid #2196f3;
+        }
+        
+        .question-container .radio-group {
+            margin-top: 20px;
+        }
+        
+        .question-container .reasoning-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
         }
         '''
 

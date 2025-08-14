@@ -17,7 +17,8 @@ from report_generator import ReportGenerator
 
 from email_sender import EmailSender
 from questions_loader import questions_loader
-from risk_assessor import RiskAssessment, AIRiskAssessor
+from risk_assessor import RiskAssessment as OriginalRiskAssessment, AIRiskAssessor
+from flexible_risk_assessor import RiskAssessment as FlexibleRiskAssessment, FlexibleAIRiskAssessor
 from email_handlers import generate_complete_email_report, generate_short_email_report
 from static_pages import generate_system_info_page, generate_email_info_page
 from multistep_template_generator import MultiStepTemplateGenerator
@@ -34,7 +35,8 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # Initialize components
 template_generator = TemplateGenerator()
 multistep_generator = MultiStepTemplateGenerator()
-risk_assessor = AIRiskAssessor()
+risk_assessor = AIRiskAssessor()  # Keep old one for backward compatibility
+flexible_risk_assessor = FlexibleAIRiskAssessor()  # New flexible assessor
 report_generator = ReportGenerator()
 
 email_sender = EmailSender()
@@ -116,17 +118,41 @@ def process_step_submission(step_number):
 
     
     else:
-        # Process question step
-        question_value = request.form.get(step_key, '').strip()
-        reasoning_value = request.form.get(f'{step_key}_reasoning', '').strip()
+        # Process question step - handle multiple questions per step
+        # Get current step configuration from template generator
+        current_config = multistep_generator.get_current_config()
         
-        if not question_value:
-            errors[step_key] = 'Please select an option'
+        # Find all questions that belong to this step/dimension
+        step_questions = []
+        for question_id, question_config in current_config['questions'].items():
+            if question_config.get('_dimension') == step_key:
+                step_questions.append(question_id)
+        
+        # DEBUG: Show what questions we found for this step
+        print(f"\n🔍 DEBUG - STEP {step_number} ({step_key}) QUESTIONS: {step_questions}")
+        print(f"🔍 DEBUG - FORM DATA: {dict(request.form)}")
+        
+        # Process each question in this step
+        step_has_answers = False
+        for question_id in step_questions:
+            question_value = request.form.get(question_id, '').strip()
+            reasoning_value = request.form.get(f'{question_id}_reasoning', '').strip()
+            
+            print(f"🔍 DEBUG - Processing {question_id}: value='{question_value}', reasoning='{reasoning_value}'")
+            
+            if question_value:
+                session['assessment_data'][question_id] = question_value
+                session['assessment_data'][f'{question_id}_reasoning'] = reasoning_value
+                step_has_answers = True
+        
+        # Validate that at least one question was answered
+        if not step_has_answers:
+            errors[step_key] = 'Please answer at least one question'
         
         if not errors:
-            session['assessment_data'][step_key] = question_value
-            session['assessment_data'][f'{step_key}_reasoning'] = reasoning_value
             session.modified = True
+        
+        print(f"🔍 END DEBUG\n")
 
     
     # Handle validation errors
@@ -146,71 +172,70 @@ def generate_final_assessment():
     try:
         assessment_data = session.get('assessment_data', {})
         
-        # Validate we have all required data
-        required_fields = ['workflow_name', 'assessor', 'autonomy', 'oversight', 'impact', 'orchestration']
-        if 'data_sensitivity' in risk_assessor.dimension_scores:
-            required_fields.append('data_sensitivity')
+        # DEBUG: Log all assessment data
+        print(f"\n🔍 DEBUG - FINAL ASSESSMENT DATA:")
+        for key, value in assessment_data.items():
+            print(f"  {key}: {value}")
+        print(f"🔍 END DEBUG\n")
         
-        missing_fields = [field for field in required_fields if not assessment_data.get(field)]
-        if missing_fields:
-            session['step_errors'] = {field: 'This field is required' for field in missing_fields}
+        # Validate basic required data
+        basic_required = ['workflow_name', 'assessor']
+        missing_basic = [field for field in basic_required if not assessment_data.get(field)]
+        if missing_basic:
+            session['step_errors'] = {field: 'This field is required' for field in missing_basic}
             return redirect('/step/1')
         
-        # Extract form data
+        # Extract basic form data
         workflow_name = assessment_data['workflow_name']
         assessor = assessment_data['assessor']
-        autonomy = assessment_data['autonomy']
-        oversight = assessment_data['oversight']
-        impact = assessment_data['impact']
-        orchestration = assessment_data['orchestration']
-        data_sensitivity = assessment_data.get('data_sensitivity')
         
-        # Extract reasoning
-        autonomy_reasoning = assessment_data.get('autonomy_reasoning', '').strip()
-        oversight_reasoning = assessment_data.get('oversight_reasoning', '').strip()
-        impact_reasoning = assessment_data.get('impact_reasoning', '').strip()
-        orchestration_reasoning = assessment_data.get('orchestration_reasoning', '').strip()
-        data_sensitivity_reasoning = assessment_data.get('data_sensitivity_reasoning', '').strip()
+        # Use flexible risk assessor to handle multiple questions per dimension
+        risk_score, risk_level, dimension_scores, question_scores = flexible_risk_assessor.calculate_flexible_risk_score(assessment_data)
         
-        # Calculate risk
-        risk_score, risk_level = risk_assessor.calculate_risk_score(
-            autonomy, oversight, impact, orchestration, data_sensitivity
-        )
+        # Generate recommendations using the flexible assessor
+        recommendations = flexible_risk_assessor.get_recommendations(risk_level)
+        conditional_recommendations = flexible_risk_assessor.get_conditional_recommendations(assessment_data)
+        # Combine both types of recommendations
+        all_recommendations = recommendations + conditional_recommendations
         
-        # Generate recommendations
-        recommendations = risk_assessor.generate_recommendations(
-            risk_level, autonomy, oversight, impact, data_sensitivity
-        )
+        # Create assessment object with all responses from assessment_data
+        responses_dict = {}
         
-        # Create assessment object
-        responses_dict = {
-            'autonomy_reasoning': autonomy_reasoning or 'Not provided',
-            'oversight_reasoning': oversight_reasoning or 'Not provided',
-            'impact_reasoning': impact_reasoning or 'Not provided',
-            'orchestration_reasoning': orchestration_reasoning or 'Not provided'
-        }
+        # Extract ALL fields from assessment_data (answers and reasoning)
+        for key, value in assessment_data.items():
+            if key not in ['workflow_name', 'assessor']:  # Exclude meta fields
+                responses_dict[key] = value.strip() if value else 'Not provided'
         
-        # Add data sensitivity if it exists
-        if data_sensitivity:
-            responses_dict['data_sensitivity_reasoning'] = data_sensitivity_reasoning or 'Not provided'
+        # Extract primary dimension values for backward compatibility with reports
+        # Use the primary question for each dimension (the one matching the dimension name)
+        autonomy = assessment_data.get('autonomy', 'unknown')
+        oversight = assessment_data.get('oversight', 'unknown')  
+        impact = assessment_data.get('impact', 'unknown')
+        orchestration = assessment_data.get('orchestration', 'unknown')
+        data_sensitivity = assessment_data.get('data_sensitivity', 'unknown')
         
-        assessment = RiskAssessment(
+        # Get questions config for report generation
+        questions_config = multistep_generator.get_current_config()
+        
+        # Create FlexibleRiskAssessment with the new structure
+        assessment = FlexibleRiskAssessment(
             workflow_name=workflow_name,
             assessor=assessor,
-            date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            autonomy_level=autonomy,
-            oversight_level=oversight,
-            impact_level=impact,
-            orchestration_type=orchestration,
-            overall_risk=risk_level,
+            autonomy=autonomy,
+            oversight=oversight,
+            impact=impact,
+            orchestration=orchestration,
+            data_sensitivity=data_sensitivity,
             risk_score=risk_score,
-            recommendations=recommendations,
-            responses=responses_dict
+            risk_level=risk_level,
+            recommendations=all_recommendations,
+            conditional_recommendations=conditional_recommendations,
+            dimension_scores=dimension_scores,
+            question_scores=question_scores,
+            responses=responses_dict,
+            date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            questions_config=questions_config
         )
-        
-        # Add data sensitivity level to assessment if it exists
-        if data_sensitivity:
-            assessment.data_sensitivity_level = data_sensitivity
         
         # Store assessment in session for the report page
         session_id = f"assessment_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(assessment.workflow_name) % 10000}"

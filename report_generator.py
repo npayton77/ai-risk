@@ -53,41 +53,60 @@ class ReportGenerator:
 
     def generate_comprehensive_report(self, assessment: Any) -> str:
         """Generate a comprehensive, beautiful HTML report"""
-        risk_style = self.risk_styling.get(assessment.overall_risk, self.risk_styling['medium'])
+        # Handle both old and new assessment formats
+        risk_level = getattr(assessment, 'risk_level', getattr(assessment, 'overall_risk', 'medium'))
+        risk_style = self.risk_styling.get(risk_level, self.risk_styling['medium'])
         
         # Calculate max possible score dynamically
         max_score = len(self.dimension_scores) * 4
         risk_percentage = (assessment.risk_score / max_score) * 100
         
-        # Generate dimension cards
+        # Generate dimension cards - handle both old and new formats
         dimension_cards = ""
         dimension_data = {
-            'autonomy': assessment.autonomy_level,
-            'oversight': assessment.oversight_level,
-            'impact': assessment.impact_level,
-            'orchestration': assessment.orchestration_type
+            'autonomy': getattr(assessment, 'autonomy', getattr(assessment, 'autonomy_level', 'unknown')),
+            'oversight': getattr(assessment, 'oversight', getattr(assessment, 'oversight_level', 'unknown')),
+            'impact': getattr(assessment, 'impact', getattr(assessment, 'impact_level', 'unknown')),
+            'orchestration': getattr(assessment, 'orchestration', getattr(assessment, 'orchestration_type', 'unknown'))
         }
         
         # Add data sensitivity if it exists
-        if hasattr(assessment, 'data_sensitivity_level') and assessment.data_sensitivity_level:
-            dimension_data['data_sensitivity'] = assessment.data_sensitivity_level
+        data_sensitivity = getattr(assessment, 'data_sensitivity', getattr(assessment, 'data_sensitivity_level', None))
+        if data_sensitivity:
+            dimension_data['data_sensitivity'] = data_sensitivity
 
         for dimension, value in dimension_data.items():
-            if dimension in self.dimension_scores and value in self.dimension_scores[dimension]:
-                score = self.dimension_scores[dimension][value]
-                # Get individual risk level and color for this dimension
+            # Check if we have flexible dimension scores (from multiple questions)
+            if hasattr(assessment, 'dimension_scores') and dimension in assessment.dimension_scores:
+                # Use the aggregated score from flexible assessor
+                score = assessment.dimension_scores[dimension]
+                # Convert aggregated score to risk level
                 individual_risk = self.get_individual_risk_level(score)
                 individual_style = self.risk_styling.get(individual_risk, self.risk_styling['medium'])
                 
-                dimension_cards += f'''
+                # Generate display content for all questions in this dimension
+                display_value, dimension_description = self._generate_multi_question_display(assessment, dimension)
+                
+            elif dimension in self.dimension_scores and value in self.dimension_scores[dimension]:
+                # Fallback to old single-question scoring
+                score = self.dimension_scores[dimension][value]
+                individual_risk = self.get_individual_risk_level(score)
+                individual_style = self.risk_styling.get(individual_risk, self.risk_styling['medium'])
+                display_value = value.upper()
+                dimension_description = self.get_dimension_description(dimension, value)
+            else:
+                # Skip if no scoring available
+                continue
+                
+            dimension_cards += f'''
                                 <div class="dimension-card">
                 <div class="dimension-header">
                     <div class="dimension-title">{self.get_dimension_title(dimension)}</div>
-                    <div class="dimension-score" style="background: {individual_style['color']};">{score}/4</div>
+                    <div class="dimension-score" style="background: {individual_style['color']};">{score:.1f}/4</div>
                 </div>
-                <div class="dimension-value" style="color: {individual_style['color']};">{value.upper()}</div>
+                <div class="dimension-value" style="color: {individual_style['color']};">{display_value}</div>
                         <div class="dimension-description">
-                            {self.get_dimension_description(dimension, value)}
+                            {dimension_description}
                         </div>
                         <div class="score-bar">
                             <div class="score-fill" style="width: {(score/4)*100}%; background: {individual_style['color']};"></div>
@@ -106,28 +125,47 @@ class ReportGenerator:
                 </div>
             '''
 
-        # Generate reasoning cards
+        # Generate reasoning cards for ALL questions dynamically
         reasoning_cards = ""
-        reasoning_data = {
-            'Autonomy Level': assessment.responses.get('autonomy_reasoning', 'Not provided'),
-            'Oversight Level': assessment.responses.get('oversight_reasoning', 'Not provided'),
-            'Impact Level': assessment.responses.get('impact_reasoning', 'Not provided'),
-            'Orchestration Type': assessment.responses.get('orchestration_reasoning', 'Not provided')
-        }
         
-        if 'data_sensitivity_reasoning' in assessment.responses:
-            reasoning_data['Data Sensitivity'] = assessment.responses.get('data_sensitivity_reasoning', 'Not provided')
+        # Get all reasoning fields from responses
+        reasoning_fields = {}
+        for key, value in assessment.responses.items():
+            if key.endswith('_reasoning') and value and value.strip() and value.strip() != 'Not provided':
+                # Convert question ID to readable name
+                question_base = key.replace('_reasoning', '')
+                
+                # Get proper question title if available
+                question_title = question_base.replace('_', ' ').title()
+                dimension_name = ""
+                
+                # Try to get actual question title and dimension from config
+                if hasattr(assessment, 'questions_config') and assessment.questions_config:
+                    question_config = assessment.questions_config.get('questions', {}).get(question_base, {})
+                    if question_config.get('title'):
+                        question_title = question_config['title']
+                    # Get dimension name from question metadata
+                    dimension_name = question_config.get('_dimension', '').replace('_', ' ').title()
+                
+                # Add dimension prefix if we have it and it's not already included
+                if dimension_name and not question_title.lower().startswith(dimension_name.lower()):
+                    display_title = f"{dimension_name}: {question_title}"
+                else:
+                    display_title = question_title
+                
+                reasoning_fields[f"{display_title} Justification"] = value.strip()
 
-        for question, answer in reasoning_data.items():
+        # Generate reasoning cards
+        for question, answer in reasoning_fields.items():
             reasoning_cards += f'''
                 <div class="reasoning-card">
-                    <div class="reasoning-question">{question} Justification:</div>
-                    <div class="reasoning-answer">{answer if answer else 'Not provided'}</div>
+                    <div class="reasoning-question">{question}:</div>
+                    <div class="reasoning-answer">{answer}</div>
                 </div>
             '''
 
         # Risk assessment summary
-        risk_summary = self._get_risk_summary(assessment.overall_risk)
+        risk_summary = self._get_risk_summary(risk_level)
         
         # Generate executive summary
         exec_summary = self._generate_executive_summary(assessment)
@@ -153,6 +191,8 @@ class ReportGenerator:
             color: #2c3e50;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            zoom: 0.75;
+            transform-origin: top left;
         }}
         
         .report-container {{
@@ -675,7 +715,7 @@ class ReportGenerator:
             </div>
             <div class="meta-card">
                 <div class="meta-label">Workflow Type</div>
-                <div class="meta-value">AI {assessment.orchestration_type.title()} System</div>
+                <div class="meta-value">AI {dimension_data['orchestration'].title()} System</div>
             </div>
             <div class="meta-card">
                 <div class="meta-label">Report ID</div>
@@ -687,7 +727,7 @@ class ReportGenerator:
         <div class="risk-overview">
             <div class="risk-badge">
 
-                <span class="risk-level">{assessment.overall_risk} Risk</span>
+                <span class="risk-level">{risk_level} Risk</span>
             </div>
             <div class="risk-score">Risk Score: {assessment.risk_score} / {max_score}</div>
             <div class="risk-gauge">
@@ -711,7 +751,7 @@ class ReportGenerator:
                 <div class="risk-indicators">
                     <div class="indicator">
                         <span class="indicator-label">Risk Level</span>
-                        <span class="indicator-value">{assessment.overall_risk.upper()}</span>
+                        <span class="indicator-value">{risk_level.upper()}</span>
                     </div>
                     <div class="indicator">
                         <span class="indicator-label">Total Score</span>
@@ -782,16 +822,22 @@ class ReportGenerator:
 
     def _generate_executive_summary(self, assessment: Any) -> str:
         """Generate executive summary based on assessment"""
+        # Handle both old and new assessment formats
+        risk_level = getattr(assessment, 'risk_level', getattr(assessment, 'overall_risk', 'medium'))
+        autonomy = getattr(assessment, 'autonomy', getattr(assessment, 'autonomy_level', 'unknown'))
+        impact = getattr(assessment, 'impact', getattr(assessment, 'impact_level', 'unknown'))
+        oversight = getattr(assessment, 'oversight', getattr(assessment, 'oversight_level', 'unknown'))
+        
         # Determine key risk factors
         high_risk_factors = []
-        if hasattr(assessment, 'autonomy_level') and assessment.autonomy_level in ['agent', 'autonomous']:
+        if autonomy in ['agent', 'autonomous']:
             high_risk_factors.append('high autonomy')
-        if hasattr(assessment, 'impact_level') and assessment.impact_level in ['strategic', 'external']:
+        if impact in ['strategic', 'external']:
             high_risk_factors.append('significant impact potential')
-        if hasattr(assessment, 'oversight_level') and assessment.oversight_level in ['exception', 'minimal']:
+        if oversight in ['exception', 'minimal']:
             high_risk_factors.append('limited human oversight')
         
-        summary = f"The '{assessment.workflow_name}' AI system has been assessed as <strong>{assessment.overall_risk.upper()} RISK</strong> "
+        summary = f"The '{assessment.workflow_name}' AI system has been assessed as <strong>{risk_level.upper()} RISK</strong> "
         summary += f"with a score of {assessment.risk_score} out of {len(self.dimension_scores) * 4}. "
         
         if high_risk_factors:
@@ -800,11 +846,123 @@ class ReportGenerator:
         summary += f"This assessment has generated {len(assessment.recommendations)} specific recommendations "
         summary += "to help mitigate identified risks and ensure safe deployment. "
         
-        if assessment.overall_risk in ['high', 'critical']:
+        if risk_level in ['high', 'critical']:
             summary += "<strong>Immediate attention and enhanced safeguards are strongly recommended before deployment.</strong>"
-        elif assessment.overall_risk == 'medium':
+        elif risk_level == 'medium':
             summary += "Regular monitoring and implementation of recommended safeguards is advised."
         else:
             summary += "Standard monitoring procedures should be sufficient for this risk level."
             
-        return summary 
+        return summary
+    
+    def _generate_multi_question_display(self, assessment, dimension):
+        """Generate display content for dimensions with multiple questions"""
+        if not hasattr(assessment, 'question_scores') or dimension not in assessment.question_scores:
+            # Fallback to single question display
+            dimension_value = getattr(assessment, dimension, 'unknown')
+            return dimension_value.upper(), self.get_dimension_description(dimension, dimension_value)
+        
+        question_scores = assessment.question_scores[dimension]
+        
+        # DEBUG: Print what we're working with
+        print(f"DEBUG: Dimension '{dimension}' question_scores: {question_scores}")
+        
+        # Filter out reasoning fields - only count actual questions
+        actual_questions = {k: v for k, v in question_scores.items() if not k.endswith('_reasoning')}
+        
+        print(f"DEBUG: Actual questions after filtering: {actual_questions}")
+        print(f"DEBUG: Number of actual questions: {len(actual_questions)}")
+        
+        if len(actual_questions) <= 1:
+            # Single question, use standard display
+            dimension_value = getattr(assessment, dimension, 'unknown')
+            print(f"DEBUG: Using single question display for {dimension}")
+            return dimension_value.upper(), self.get_dimension_description(dimension, dimension_value)
+        
+        print(f"DEBUG: Using multi-question display for {dimension}")
+        
+        # Multiple actual questions - create detailed display
+        question_details = []
+        
+        for question_id, score in actual_questions.items():
+            # Get actual question title from config if available
+            question_title = question_id.replace('_', ' ').title()
+            question_description = ""
+            
+            if hasattr(assessment, 'questions_config') and assessment.questions_config:
+                question_config = assessment.questions_config.get('questions', {}).get(question_id, {})
+                if question_config.get('title'):
+                    question_title = question_config['title']
+                if question_config.get('help_text'):
+                    question_description = question_config['help_text']
+            
+            # Fallback to cleaned up ID if no config found
+            if not question_title or question_title == question_id.replace('_', ' ').title():
+                clean_title = question_id.replace('_', ' ').title()
+                if clean_title.startswith(dimension.title()):
+                    clean_title = clean_title.replace(dimension.title(), '').strip()
+                if not clean_title or clean_title == 'Test':
+                    clean_title = f"{dimension.title()} Question"
+                question_title = clean_title
+            
+            # Get user's selected answer
+            user_answer = getattr(assessment, 'responses', {}).get(question_id, 'unknown')
+            if not user_answer and hasattr(assessment, question_id):
+                user_answer = getattr(assessment, question_id)
+            
+            # Get answer details from config if available
+            answer_title = user_answer.replace('_', ' ').title()
+            answer_description = ""
+            
+            if hasattr(assessment, 'questions_config') and assessment.questions_config:
+                question_config = assessment.questions_config.get('questions', {}).get(question_id, {})
+                options = question_config.get('options', {})
+                if user_answer in options:
+                    option_info = options[user_answer]
+                    if option_info.get('title'):
+                        answer_title = option_info['title']
+                    if option_info.get('description'):
+                        answer_description = option_info['description']
+            
+            # Get risk level for this score
+            risk_level = self.get_individual_risk_level(score)
+            
+            # Get user reasoning if available
+            reasoning = getattr(assessment, 'responses', {}).get(f'{question_id}_reasoning', '')
+            if not reasoning and hasattr(assessment, f'{question_id}_reasoning'):
+                reasoning = getattr(assessment, f'{question_id}_reasoning')
+            
+            # Create detailed question info
+            question_info = {
+                'id': question_id,
+                'title': question_title,
+                'description': question_description,
+                'answer': answer_title,
+                'answer_description': answer_description,
+                'answer_raw': user_answer,
+                'score': score,
+                'risk_level': risk_level,
+                'reasoning': reasoning
+            }
+            question_details.append(question_info)
+        
+        # Create a combined display value
+        display_value = f"MULTI-FACTOR ({len(actual_questions)} QUESTIONS)"
+        
+        # Create detailed HTML description
+        description_parts = []
+        for i, q in enumerate(question_details, 1):
+            part = f"<strong>Q{i}: {q['title']}</strong>"
+            if q['description']:
+                part += f"<br/><small><em>{q['description']}</em></small>"
+            part += f"<br/>Selected: {q['answer']}"
+            if q['answer_description']:
+                part += f" - {q['answer_description']}"
+            part += f"<br/>Score: {q['score']}/4 ({q['risk_level'].title()})"
+            if q['reasoning'] and q['reasoning'] != 'Not provided':
+                part += f"<br/>Reasoning: <em>{q['reasoning']}</em>"
+            description_parts.append(part)
+        
+        description = "<br/><br/>".join(description_parts)
+        
+        return display_value, description 

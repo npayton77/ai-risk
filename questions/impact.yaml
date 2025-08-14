@@ -1,19 +1,34 @@
 impact_questions:
   impact:
-    title: "📊 Output Impact: What is the consequence level of AI decisions/outputs?"
-    help_text: "Think about the worst-case scenario if AI makes a mistake"
+    title: "\U0001F4CA Output Impact: What is the consequence level of AI decisions/outputs?"
+    help_text: Think about the worst-case scenario if AI makes a mistake
     required: true
     options:
       informational:
-        title: "Informational"
-        description: "Data/insights only - reports, analysis (embarrassing but fixable)"
+        title: Informational
+        description: Data/insights only - reports, analysis (embarrassing but fixable)
       operational:
-        title: "Operational"
-        description: "Affects daily operations - scheduling, routing (disrupts business but contained)"
+        title: Operational
+        description: Affects daily operations - scheduling, routing (disrupts business
+          but contained)
       strategic:
-        title: "Strategic"
-        description: "Business-critical decisions - investments, hiring (major business impact)"
+        title: Strategic
+        description: Business-critical decisions - investments, hiring (major business
+          impact)
       external:
-        title: "External"
-        description: "Customer/regulatory impact - patient care, financial transactions (affects public/regulators)"
-    reasoning_prompt: "Why did you choose this level? (Optional)"
+        title: External
+        description: Customer/regulatory impact - patient care, financial transactions
+          (affects public/regulators)
+    reasoning_prompt: Why did you choose this level? (Optional)
+  impact_1:
+    title: impact test question
+    required: true
+    options:
+      imp1:
+        title: Impact 1
+        description: This is the impact description for 1
+      imp2:
+        title: Impact 2
+        description: This is a description for impact answer 2
+    help_text: This is an impact test question
+    reasoning_prompt: Please explain

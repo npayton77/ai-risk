@@ -104,6 +104,8 @@ class AdminInterface:
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            zoom: 0.75;
+            transform-origin: top left;
         }
         .container { max-width: 1200px; margin: 0 auto; }
         .header {
@@ -331,6 +333,8 @@ class AdminInterface:
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            zoom: 0.75;
+            transform-origin: top left;
         }
         .container { max-width: 1200px; margin: 0 auto; }
         .header {
@@ -556,6 +560,8 @@ class AdminInterface:
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            zoom: 0.75;
+            transform-origin: top left;
         }
         .container { max-width: 800px; margin: 0 auto; }
         .form-card {
@@ -738,6 +744,10 @@ class AdminInterface:
                                 <input type="text" name="option_titles[]" class="form-control" placeholder="e.g., Low Risk" required>
                             </div>
                             <div>
+                                <label class="form-label">Option Description</label>
+                                <input type="text" name="option_descriptions[]" class="form-control" placeholder="e.g., Minimal risk to operations">
+                            </div>
+                            <div>
                                 <label class="form-label">Risk Score (1-4) *</label>
                                 <input type="number" name="option_scores[]" class="form-control" min="1" max="4" placeholder="1" required>
                             </div>
@@ -751,6 +761,9 @@ class AdminInterface:
                             </div>
                             <div>
                                 <input type="text" name="option_titles[]" class="form-control" placeholder="e.g., High Risk" required>
+                            </div>
+                            <div>
+                                <input type="text" name="option_descriptions[]" class="form-control" placeholder="e.g., Significant risk to operations">
                             </div>
                             <div>
                                 <input type="number" name="option_scores[]" class="form-control" min="1" max="4" placeholder="4" required>
@@ -796,6 +809,9 @@ class AdminInterface:
                 </div>
                 <div>
                     <input type="text" name="option_titles[]" class="form-control" placeholder="e.g., Medium Risk" required>
+                </div>
+                <div>
+                    <input type="text" name="option_descriptions[]" class="form-control" placeholder="e.g., Moderate risk to operations">
                 </div>
                 <div>
                     <input type="number" name="option_scores[]" class="form-control" min="1" max="4" placeholder="2" required>
@@ -854,7 +870,24 @@ class AdminInterface:
             # Extract options
             option_keys = request.form.getlist('option_keys[]')
             option_titles = request.form.getlist('option_titles[]')
+            option_descriptions = request.form.getlist('option_descriptions[]')
             option_scores = request.form.getlist('option_scores[]')
+            
+            # DEBUG: Log all submitted form data
+            print(f"\n🔍 DEBUG - ADD QUESTION FORM DATA:")
+            print(f"  Dimension: {dimension}")
+            print(f"  Question ID: {question_id}")
+            print(f"  Title: {title}")
+            print(f"  Help Text: {help_text}")
+            print(f"  Required: {required}")
+            print(f"  Reasoning Prompt: {reasoning_prompt}")
+            print(f"  Weight: {weight}")
+            print(f"  Option Keys: {option_keys}")
+            print(f"  Option Titles: {option_titles}")
+            print(f"  Option Descriptions: {option_descriptions}")
+            print(f"  Option Scores: {option_scores}")
+            print(f"  Full Form Data: {dict(request.form)}")
+            print(f"🔍 END DEBUG\n")
             
             # Validation
             if not all([dimension, question_id, title]) or len(option_keys) < 2:
@@ -874,13 +907,17 @@ class AdminInterface:
             options = {}
             scoring = {}
             
-            for key, title_text, score in zip(option_keys, option_titles, option_scores):
+            for key, title_text, desc_text, score in zip(option_keys, option_titles, option_descriptions, option_scores):
                 if key.strip() and title_text.strip():
                     options[key.strip()] = {
                         "title": title_text.strip(),
-                        "description": ""  # Could be added later
+                        "description": desc_text.strip() if desc_text else ""
                     }
                     scoring[key.strip()] = int(score)
+            
+            # DEBUG: Log what options and scoring structures get created
+            print(f"🔍 DEBUG - OPTIONS STRUCTURE CREATED: {options}")
+            print(f"🔍 DEBUG - SCORING STRUCTURE CREATED: {scoring}")
             
             # Add question to dimension file
             self._add_question_to_dimension_file(dimension, question_id, {
@@ -997,6 +1034,8 @@ class AdminInterface:
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            zoom: 0.75;
+            transform-origin: top left;
         }
         .container { max-width: 800px; margin: 0 auto; }
         .form-card {
@@ -1238,6 +1277,9 @@ class AdminInterface:
                     <input type="text" name="option_titles[]" class="form-control" placeholder="e.g., Medium Risk" required>
                 </div>
                 <div>
+                    <input type="text" name="option_descriptions[]" class="form-control" placeholder="e.g., Moderate risk to operations">
+                </div>
+                <div>
                     <input type="number" name="option_scores[]" class="form-control" min="1" max="4" placeholder="2" required>
                 </div>
                 <div>
@@ -1283,6 +1325,22 @@ class AdminInterface:
             option_keys = request.form.getlist('option_keys[]')
             option_titles = request.form.getlist('option_titles[]')
             option_scores = request.form.getlist('option_scores[]')
+            
+            # DEBUG: Log all submitted form data
+            print(f"\n🔍 DEBUG - EDIT QUESTION FORM DATA:")
+            print(f"  Dimension: {dimension}")
+            print(f"  Question ID: {question_id}")
+            print(f"  Original Question ID: {original_question_id}")
+            print(f"  Title: {title}")
+            print(f"  Help Text: {help_text}")
+            print(f"  Required: {required}")
+            print(f"  Reasoning Prompt: {reasoning_prompt}")
+            print(f"  Weight: {weight}")
+            print(f"  Option Keys: {option_keys}")
+            print(f"  Option Titles: {option_titles}")
+            print(f"  Option Scores: {option_scores}")
+            print(f"  Full Form Data: {dict(request.form)}")
+            print(f"🔍 END DEBUG\n")
             
             # Validation
             if not all([dimension, question_id, title]) or len(option_keys) < 2:

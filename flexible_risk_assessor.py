@@ -24,6 +24,9 @@ class RiskAssessment:
     conditional_recommendations: List[str]
     dimension_scores: Dict[str, float]  # Individual dimension scores
     question_scores: Dict[str, Dict[str, float]]  # Detailed question scores
+    responses: Dict[str, str]  # Reasoning responses for compatibility with report generator
+    date: str = ""  # Assessment date for compatibility
+    questions_config: Dict = None  # Questions configuration for report generation
 
 class FlexibleAIRiskAssessor:
     def __init__(self, scoring_file: str = 'scoring_flexible.yaml', 
@@ -55,6 +58,17 @@ class FlexibleAIRiskAssessor:
         questions_config = dimension_config.get('questions', {})
         question_config = questions_config.get(question_id, {})
         
+        # DEBUG: Show scoring lookup
+        print(f"🔍 DEBUG - SCORING LOOKUP:")
+        print(f"  Dimension: {dimension}")
+        print(f"  Question ID: {question_id}")
+        print(f"  Answer: {answer}")
+        print(f"  Available questions in {dimension}: {list(questions_config.keys())}")
+        print(f"  Question config found: {bool(question_config)}")
+        if question_config:
+            print(f"  Scoring options: {question_config.get('scoring', {})}")
+        print(f"🔍 END DEBUG")
+        
         # Get scoring for this specific question
         scoring = question_config.get('scoring', {})
         
@@ -73,8 +87,14 @@ class FlexibleAIRiskAssessor:
     def aggregate_dimension_scores(self, dimension: str, question_scores: Dict[str, float]) -> float:
         """Aggregate multiple question scores for a dimension"""
         dimension_config = self.dimension_config.get(dimension, {})
-        aggregation = dimension_config.get('aggregation', 'average')
+        aggregation = dimension_config.get('aggregation', 'max')
         questions_config = dimension_config.get('questions', {})
+        
+        # DEBUG: Show aggregation details
+        print(f"\n🔍 DEBUG - AGGREGATING {dimension.upper()}:")
+        print(f"  Question Scores: {question_scores}")
+        print(f"  Aggregation Method: {aggregation}")
+        print(f"  Questions Config: {questions_config}")
         
         if not question_scores:
             return 0.0
@@ -83,21 +103,42 @@ class FlexibleAIRiskAssessor:
             return sum(question_scores.values())
         
         elif aggregation == 'average':
-            return mean(question_scores.values())
+            # Filter out reasoning fields
+            actual_scores = [score for q_id, score in question_scores.items() if not q_id.endswith('_reasoning')]
+            return mean(actual_scores) if actual_scores else 0.0
         
         elif aggregation == 'weighted_average':
             total_weighted_score = 0.0
             total_weight = 0.0
             
             for question_id, score in question_scores.items():
+                # Skip reasoning fields - they shouldn't be included in scoring
+                if question_id.endswith('_reasoning'):
+                    print(f"    {question_id}: SKIPPED (reasoning field)")
+                    continue
+                    
                 weight = questions_config.get(question_id, {}).get('weight', 1.0)
                 total_weighted_score += score * weight
                 total_weight += weight
+                print(f"    {question_id}: score={score}, weight={weight}, weighted={score * weight}")
             
-            return total_weighted_score / total_weight if total_weight > 0 else 0.0
+            final_score = total_weighted_score / total_weight if total_weight > 0 else 0.0
+            print(f"  Final Score: {total_weighted_score}/{total_weight} = {final_score}")
+            print(f"🔍 END DEBUG\n")
+            return final_score
         
         elif aggregation == 'max':
-            return max(question_scores.values())
+            # Filter out reasoning fields and find maximum score
+            actual_scores = [score for q_id, score in question_scores.items() if not q_id.endswith('_reasoning')]
+            if actual_scores:
+                max_score = max(actual_scores)
+                print(f"  Maximum Score: {max_score}")
+                print(f"🔍 END DEBUG\n")
+                return max_score
+            else:
+                print(f"  No actual questions found, returning 0.0")
+                print(f"🔍 END DEBUG\n")
+                return 0.0
         
         elif aggregation == 'min':
             return min(question_scores.values())
@@ -144,24 +185,45 @@ class FlexibleAIRiskAssessor:
 
     def is_question_in_dimension(self, question_id: str, dimension: str) -> bool:
         """Check if a question belongs to a specific dimension"""
-        # This is a simple heuristic - you might want to make this more sophisticated
-        if question_id.startswith(dimension):
-            return True
-        
-        # Check if question is explicitly configured for this dimension
+        # First check if question is explicitly configured for this dimension in scoring
         dimension_config = self.dimension_config.get(dimension, {})
         questions_config = dimension_config.get('questions', {})
-        return question_id in questions_config
+        if question_id in questions_config:
+            return True
+        
+        # Fallback to old heuristic for backward compatibility
+        if question_id.startswith(dimension):
+            return True
+            
+        return False
 
     def determine_risk_level(self, score: float) -> str:
         """Determine risk level based on score"""
         # Round score for threshold comparison
         rounded_score = round(score)
         
+        # DEBUG: Show risk calculation
+        print(f"\n🔍 DEBUG - RISK LEVEL CALCULATION:")
+        print(f"  Total Score: {score}")
+        print(f"  Rounded Score: {rounded_score}")
+        print(f"  Risk Thresholds: {self.risk_thresholds}")
+        
         for level, config in self.risk_thresholds.items():
+            print(f"  Checking {level}: {config['min']} <= {rounded_score} <= {config['max']} = {config['min'] <= rounded_score <= config['max']}")
             if config['min'] <= rounded_score <= config['max']:
+                print(f"  ✅ Matched: {config['level']}")
+                print(f"🔍 END DEBUG\n")
                 return config['level']
         
+        # Handle scores below the minimum threshold
+        min_threshold = min(config['min'] for config in self.risk_thresholds.values())
+        if rounded_score < min_threshold:
+            print(f"  ✅ Score {rounded_score} below minimum threshold {min_threshold}, returning 'low'")
+            print(f"🔍 END DEBUG\n")
+            return 'low'
+        
+        print(f"  ❌ No threshold matched, returning 'unknown'")
+        print(f"🔍 END DEBUG\n")
         return 'unknown'
 
     def get_recommendations(self, risk_level: str) -> List[str]:
