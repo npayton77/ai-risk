@@ -6,6 +6,7 @@ Creates step-by-step wizard pages for better user experience
 
 from typing import Dict, Any, List
 from questions_loader import questions_loader
+from config_service import config_service
 
 class MultiStepTemplateGenerator:
     def __init__(self):
@@ -27,7 +28,8 @@ class MultiStepTemplateGenerator:
     
     def get_current_config(self):
         """Get fresh questions configuration (reloads from files each time)"""
-        return questions_loader.load_all_questions()
+        config_service.reload_if_changed()
+        return config_service.get_questions_config()
 
     def generate_step_page(self, step_number: int, session_data: Dict = None, errors: Dict = None) -> str:
         """Generate HTML for a specific step"""

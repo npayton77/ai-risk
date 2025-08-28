@@ -7,11 +7,14 @@ Web-based admin panel for managing questions, scoring, and configuration
 import os
 import yaml
 import json
+import time
+import secrets
 from pathlib import Path
 from flask import Blueprint, render_template_string, request, jsonify, redirect, url_for, flash, session
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from questions_loader import QuestionsLoader
+from config_service import config_service
 
 class AdminInterface:
     """Web-based admin interface for question management"""
@@ -45,15 +48,54 @@ class AdminInterface:
         except Exception as e:
             return {"error": str(e)}
     
+    def _atomic_write(self, target: Path, content: str) -> None:
+        tmp_path = target.with_suffix(target.suffix + f".{int(time.time()*1000)}.tmp")
+        with open(tmp_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        os.replace(tmp_path, target)
+
+    def _acquire_lock(self, target: Path, timeout: float = 5.0) -> Optional[Path]:
+        lock_path = target.with_suffix(target.suffix + '.lock')
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.close(fd)
+                return lock_path
+            except FileExistsError:
+                time.sleep(0.05)
+        return None
+
+    def _release_lock(self, lock_path: Optional[Path]) -> None:
+        if lock_path and lock_path.exists():
+            try:
+                os.remove(lock_path)
+            except Exception:
+                pass
+
     def save_yaml_file(self, file_path: Path, data: Dict[str, Any]) -> bool:
-        """Save data to a YAML file safely"""
+        """Save data to a YAML file safely with lock, backup, and atomic replace"""
+        lock = self._acquire_lock(file_path)
+        if not lock:
+            flash(f"Could not acquire lock for {file_path}", 'error')
+            return False
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                yaml.dump(data, f, default_flow_style=False, sort_keys=False, indent=2)
+            # Backup current file if present
+            if file_path.exists():
+                backup = file_path.with_suffix(file_path.suffix + f".bak.{int(time.time())}")
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as src, open(backup, 'w', encoding='utf-8') as dst:
+                        dst.write(src.read())
+                except Exception:
+                    pass
+            yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False, indent=2)
+            self._atomic_write(file_path, yaml_str)
             return True
         except Exception as e:
             flash(f"Error saving {file_path}: {e}", 'error')
             return False
+        finally:
+            self._release_lock(lock)
     
     def get_all_questions(self) -> Dict[str, Dict[str, Any]]:
         """Get all questions organized by dimension"""
@@ -510,6 +552,7 @@ class AdminInterface:
                                     <form method="POST" action="{{ url_for('admin.delete_question', dimension=dimension, question_id=question_id) }}" 
                                           style="display: inline;" 
                                           onsubmit="return confirm('Are you sure you want to delete this question?')">
+                                        <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token', '') }}">
                                         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                                     </form>
                                 </div>
@@ -541,6 +584,9 @@ class AdminInterface:
     def add_question(self):
         """Add a new question"""
         if request.method == 'POST':
+            if session.get('csrf_token') != request.form.get('csrf_token'):
+                flash('Invalid CSRF token', 'error')
+                return redirect(request.url)
             return self._handle_add_question_post()
         
         # GET request - show form
@@ -689,6 +735,7 @@ class AdminInterface:
             </div>
             
             <form method="POST" id="questionForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="form-group">
                     <label class="form-label" for="dimension">Dimension *</label>
                     <select name="dimension" id="dimension" class="form-control" required>
@@ -849,10 +896,14 @@ class AdminInterface:
 </html>
         """
         
+        if 'csrf_token' not in session:
+            session['csrf_token'] = secrets.token_urlsafe(32)
+
         return render_template_string(
             template,
             dimensions=self.dimensions,
-            selected_dimension=selected_dimension
+            selected_dimension=selected_dimension,
+            csrf_token=session['csrf_token']
         )
     
     def _handle_add_question_post(self):
@@ -998,6 +1049,9 @@ class AdminInterface:
     def edit_question(self, dimension: str, question_id: str):
         """Edit an existing question"""
         if request.method == 'POST':
+            if session.get('csrf_token') != request.form.get('csrf_token'):
+                flash('Invalid CSRF token', 'error')
+                return redirect(request.url)
             return self._handle_edit_question_post(dimension, question_id)
         
         # GET request - load existing question data and show form
@@ -1174,6 +1228,7 @@ class AdminInterface:
             </div>
             
             <form method="POST" id="questionForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="original_question_id" value="{{ question_id }}">
                 
                 <div class="form-group">
@@ -1302,12 +1357,16 @@ class AdminInterface:
 </html>
         """
         
+        if 'csrf_token' not in session:
+            session['csrf_token'] = secrets.token_urlsafe(32)
+
         return render_template_string(
             template,
             dimension=dimension,
             question_id=question_id,
             question_data=question_data,
-            scoring_data=scoring_data
+            scoring_data=scoring_data,
+            csrf_token=session['csrf_token']
         )
     
     def _handle_edit_question_post(self, dimension: str, question_id: str):
@@ -1469,8 +1528,106 @@ class AdminInterface:
     
     def validate_config(self):
         """Validate all configuration files"""
-        flash('Validation functionality coming soon!', 'info')
-        return redirect(url_for('admin.dashboard'))
+        # Refresh configs
+        config_service.reload_if_changed()
+        questions_by_dim = self.get_all_questions()
+        scoring = config_service.get_flexible_scoring() or {}
+        dimensions_cfg = scoring.get('dimensions', {})
+
+        errors = []
+        warnings = []
+
+        # 1) Each question has scoring and weight
+        for dim, questions in questions_by_dim.items():
+            dim_cfg = dimensions_cfg.get(dim, {})
+            q_cfg = dim_cfg.get('questions', {})
+            for qid, qdata in questions.items():
+                if qid not in q_cfg:
+                    errors.append(f"[{dim}] question '{qid}' missing scoring in scoring_flexible.yaml")
+                    continue
+                scoring_entry = q_cfg[qid]
+                if 'weight' not in scoring_entry:
+                    warnings.append(f"[{dim}] question '{qid}' missing weight (default assumed 1.0)")
+                # Option/scoring key parity check
+                option_keys = set((qdata.get('options') or {}).keys())
+                scoring_keys = set((scoring_entry.get('scoring') or {}).keys())
+                missing_scores = option_keys - scoring_keys
+                orphan_scores = scoring_keys - option_keys
+                if missing_scores:
+                    errors.append(f"[{dim}] question '{qid}' missing score for options: {sorted(missing_scores)}")
+                if orphan_scores:
+                    warnings.append(f"[{dim}] question '{qid}' has scoring for non-existent options: {sorted(orphan_scores)}")
+
+        # 2) Orphaned scoring entries not present in questions
+        for dim, dim_cfg in dimensions_cfg.items():
+            q_cfg = dim_cfg.get('questions', {})
+            defined_qids = set((questions_by_dim.get(dim) or {}).keys())
+            for qid in q_cfg.keys():
+                if qid not in defined_qids:
+                    warnings.append(f"[{dim}] scoring references missing question '{qid}'")
+
+        # Render simple results page
+        template = """
+<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>Validation Results</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f6f7fb; padding: 20px; zoom: 0.75; transform-origin: top left; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        h1 { margin-bottom: 10px; }
+        .summary { display: flex; gap: 15px; margin: 15px 0; }
+        .badge { padding: 8px 12px; border-radius: 20px; font-weight: 600; }
+        .err { background: #fdecea; color: #c92a2a; }
+        .warn { background: #fff3bf; color: #b08b00; }
+        .ok { background: #d3f9d8; color: #087f5b; }
+        ul { margin: 0; padding-left: 20px; }
+        a.btn { display: inline-block; margin-top: 20px; background: #667eea; color: white; padding: 10px 18px; border-radius: 8px; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class=\"container\">
+        <div class=\"card\">
+            <h1>Configuration Validation</h1>
+            <div class=\"summary\">
+                <div class=\"badge err\">Errors: {{ errors|length }}</div>
+                <div class=\"badge warn\">Warnings: {{ warnings|length }}</div>
+                <div class=\"badge ok\">Dimensions: {{ dim_count }}</div>
+            </div>
+        </div>
+
+        <div class=\"card\">
+            <h2>Errors</h2>
+            {% if errors %}
+            <ul>
+                {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+            </ul>
+            {% else %}<p>No errors found.</p>{% endif %}
+        </div>
+
+        <div class=\"card\">
+            <h2>Warnings</h2>
+            {% if warnings %}
+            <ul>
+                {% for w in warnings %}<li>{{ w }}</li>{% endfor %}
+            </ul>
+            {% else %}<p>No warnings.</p>{% endif %}
+            <a href=\"{{ url_for('admin.dashboard') }}\" class=\"btn\">Back to Dashboard</a>
+        </div>
+    </div>
+</body>
+</html>
+        """
+
+        return render_template_string(
+            template,
+            errors=errors,
+            warnings=warnings,
+            dim_count=len(dimensions_cfg)
+        )
     
     def api_get_dimension_questions(self, dimension: str):
         """API endpoint to get questions for a dimension"""

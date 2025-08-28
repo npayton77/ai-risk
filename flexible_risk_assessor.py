@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Dict, Any, List, Tuple, Optional
 from statistics import mean
 from questions_loader import QuestionsLoader
+from config_service import config_service
 
 @dataclass
 class RiskAssessment:
@@ -33,31 +34,25 @@ class FlexibleAIRiskAssessor:
                  recommendations_file: str = 'recommendations.yaml', 
                  questions_dir: str = 'questions'):
         """Initialize with flexible YAML configuration files"""
-        # Store paths for later reloads
+        # Retain paths for compatibility but prefer ConfigService
         self.scoring_file = scoring_file
         self.recommendations_file = recommendations_file
         self.questions_dir = questions_dir
-        # Initial load
         self.reload_configs()
 
     def reload_configs(self) -> None:
         """Reload YAML configs to pick up admin changes without restarting the app"""
-        # Load scoring configuration
-        with open(self.scoring_file, 'r', encoding='utf-8') as f:
-            self.scoring_config = yaml.safe_load(f)
-        
-        # Load recommendations configuration
-        with open(self.recommendations_file, 'r', encoding='utf-8') as f:
-            self.recommendations_config = yaml.safe_load(f)
-        
-        # Load questions configuration (fresh each time)
-        questions_loader = QuestionsLoader(self.questions_dir)
-        self.questions_config = questions_loader.load_all_questions()
-        
+        # Ask service to refresh if anything changed
+        config_service.reload_if_changed()
+        # Copy references locally for fast access
+        self.scoring_config = config_service.get_flexible_scoring() or {}
+        self.recommendations_config = config_service.get_recommendations() or {}
+        self.questions_config = config_service.get_questions_config() or {}
         # Extract configuration data
-        self.dimension_config = self.scoring_config['dimensions']
-        self.risk_thresholds = self.scoring_config['risk_thresholds']
-        self.risk_styling = self.scoring_config['risk_styling']
+        self.dimension_config = self.scoring_config.get('dimensions', {})
+        self.risk_thresholds = self.scoring_config.get('risk_thresholds', {})
+        # Prefer flexible styling; fall back handled by service if needed
+        self.risk_styling = config_service.get_risk_styling() or {}
         self.default_scoring = self.scoring_config.get('default_scoring', {})
 
     def calculate_question_score(self, dimension: str, question_id: str, answer: str) -> float:
@@ -196,6 +191,11 @@ class FlexibleAIRiskAssessor:
         # Ignore reasoning fields completely
         if question_id.endswith('_reasoning'):
             return False
+        # Prefer explicit metadata from questions config
+        questions_all = (self.questions_config or {}).get('questions', {})
+        q_meta = questions_all.get(question_id, {})
+        if q_meta.get('_dimension') == dimension:
+            return True
         # First check if question is explicitly configured for this dimension in scoring
         dimension_config = self.dimension_config.get(dimension, {})
         questions_config = dimension_config.get('questions', {})

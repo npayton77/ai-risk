@@ -9,17 +9,19 @@ from typing import Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
 from questions_loader import questions_loader
+from config_service import config_service
 
 class ReportGenerator:
     def __init__(self, scoring_file: str = 'scoring.yaml', questions_dir: str = 'questions'):
-        """Initialize with configuration files"""
-        with open(scoring_file, 'r') as f:
-            self.scoring_config = yaml.safe_load(f)
-        
-        self.questions_config = questions_loader.load_all_questions()
-        
-        self.risk_styling = self.scoring_config['risk_styling']
-        self.dimension_scores = self.scoring_config['scoring']['dimensions']
+        """Initialize with configuration files (now via ConfigService)"""
+        config_service.reload_if_changed()
+        # Keep legacy scoring for backward-compat visuals where needed
+        self.legacy_scoring = config_service.get_legacy_scoring() or {}
+        self.questions_config = config_service.get_questions_config()
+        # Styling prefers flexible config but falls back to legacy
+        self.risk_styling = config_service.get_risk_styling()
+        # For legacy single-value paths
+        self.dimension_scores = (self.legacy_scoring.get('scoring', {}) or {}).get('dimensions', {})
 
     def get_dimension_description(self, dimension: str, value: str) -> str:
         """Get description for dimension values"""
@@ -57,8 +59,10 @@ class ReportGenerator:
         risk_level = getattr(assessment, 'risk_level', getattr(assessment, 'overall_risk', 'medium'))
         risk_style = self.risk_styling.get(risk_level, self.risk_styling['medium'])
         
-        # Calculate max possible score dynamically
-        max_score = len(self.dimension_scores) * 4
+        # Calculate max possible score dynamically from flexible dimensions when available
+        flexible_dimensions = config_service.get_dimension_config()
+        dim_count = len(flexible_dimensions) if flexible_dimensions else len(self.dimension_scores)
+        max_score = max(dim_count, 1) * 4
         risk_percentage = (assessment.risk_score / max_score) * 100
         
         # Generate dimension cards - handle both old and new formats
