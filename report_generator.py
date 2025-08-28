@@ -873,15 +873,15 @@ class ReportGenerator:
         print(f"DEBUG: Actual questions after filtering: {actual_questions}")
         print(f"DEBUG: Number of actual questions: {len(actual_questions)}")
         
-        if len(actual_questions) <= 1:
-            # Single question, use standard display
+        if len(actual_questions) == 0:
+            # No actual questions — fall back to legacy behavior
             dimension_value = getattr(assessment, dimension, 'unknown')
-            print(f"DEBUG: Using single question display for {dimension}")
+            print(f"DEBUG: No actual questions found for {dimension}, using legacy display")
             return dimension_value.upper(), self.get_dimension_description(dimension, dimension_value)
         
-        print(f"DEBUG: Using multi-question display for {dimension}")
+        print(f"DEBUG: Using detailed display for {dimension} ({len(actual_questions)} question(s))")
         
-        # Multiple actual questions - create detailed display
+        # One or more actual questions - create detailed display
         question_details = []
         
         for question_id, score in actual_questions.items():
@@ -946,8 +946,12 @@ class ReportGenerator:
             }
             question_details.append(question_info)
         
-        # Create a combined display value
-        display_value = f"MULTI-FACTOR ({len(actual_questions)} QUESTIONS)"
+        # Create display value depending on number of questions
+        if len(actual_questions) == 1:
+            q = question_details[0]
+            display_value = q['answer'].upper()
+        else:
+            display_value = f"MULTI-FACTOR ({len(actual_questions)} QUESTIONS)"
         
         # Create detailed HTML description
         description_parts = []

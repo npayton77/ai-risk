@@ -50,18 +50,11 @@ dimensions:
   oversight:
     aggregation: max
     questions:
-      oversight:
+      asD:
         weight: 1.0
         scoring:
-          continuous: 1
-          checkpoint: 2
-          exception: 3
-          minimal: 4
-      over_1:
-        weight: 1.0
-        scoring:
-          over1: 1
-          over2: 3
+          QW: 1
+          QE: 2
   impact:
     aggregation: max
     questions:
@@ -92,13 +85,6 @@ dimensions:
           sequential: 2
           parallel: 3
           hierarchical: 4
-      orchestration_test:
-        weight: 1.0
-        scoring:
-          sequential: 2
-          parallel: 3
-          hierarchical: 4
-          autonomous: 4
   data_sensitivity:
     aggregation: max
     questions:
