@@ -1,34 +1,13 @@
 oversight_questions:
-  oversight:
-    title: "\U0001F50D Human Oversight: What level of human involvement exists in\
-      \ the process?"
-    help_text: Consider when and how humans can intervene in the AI process
+  asD:
+    title: SADFDSD
     required: true
     options:
-      continuous:
-        title: Continuous
-        description: Human involved in every step/decision - before every AI action
-      checkpoint:
-        title: Checkpoint
-        description: Human reviews at defined intervals - at milestones or batches
-      exception:
-        title: Exception
-        description: Human intervention only for edge cases - when AI confidence is
-          low
-      minimal:
-        title: Minimal
-        description: Periodic auditing and monitoring only - monthly reports, annual
-          audits
-    reasoning_prompt: Why did you choose this level? (Optional)
-  over_1:
-    title: Oversight test question 1
-    required: true
-    options:
-      over1:
-        title: oversight1 title
-        description: Oversight 1 desc
-      over2:
-        title: Oversight 2 title
-        description: Oversight 2 description
-    help_text: Testing oversight second question
-    reasoning_prompt: Please explain
+      QW:
+        title: WEWE
+        description: WEEW
+      QE:
+        title: WEQEWQ
+        description: EWREWR
+    help_text: SDAFSAD
+    reasoning_prompt: SDFSDA

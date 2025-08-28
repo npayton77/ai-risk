@@ -164,6 +164,18 @@ def generate_final_assessment():
     try:
         assessment_data = session.get('assessment_data', {})
         
+<<<<<<< HEAD
+=======
+        # Always reload configs to reflect latest admin changes
+        flexible_risk_assessor.reload_configs()
+        
+        # DEBUG: Log all assessment data
+        print(f"\n🔍 DEBUG - FINAL ASSESSMENT DATA:")
+        for key, value in assessment_data.items():
+            print(f"  {key}: {value}")
+        print(f"🔍 END DEBUG\n")
+        
+>>>>>>> questions4
         # Validate basic required data
         basic_required = ['workflow_name', 'assessor']
         missing_basic = [field for field in basic_required if not assessment_data.get(field)]
@@ -300,7 +312,7 @@ def single_page_assess_risk():
         if data_sensitivity:
             responses_dict['data_sensitivity_reasoning'] = data_sensitivity_reasoning or 'Not provided'
         
-        assessment = RiskAssessment(
+        assessment = OriginalRiskAssessment(
             workflow_name=workflow_name,
             assessor=assessor,
             date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -372,7 +384,7 @@ def single_page_assess_risk():
         if data_sensitivity:
             responses_dict['data_sensitivity_reasoning'] = data_sensitivity_reasoning or 'Not provided'
         
-        assessment = RiskAssessment(
+        assessment = OriginalRiskAssessment(
             workflow_name=workflow_name,
             assessor=assessor,
             date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

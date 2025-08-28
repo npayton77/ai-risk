@@ -20,21 +20,3 @@ orchestration_questions:
         description: AI systems managing other AI systems - Master AI controlling
           worker AIs
     reasoning_prompt: Why did you choose this type? (Optional)
-  orchestration_test:
-    title: How does the AI coordinate with other systems?
-    required: true
-    options:
-      sequential:
-        title: Sequential Processing
-        description: 'AI processes tasks one after another in a defined order'
-      parallel:
-        title: Parallel Processing
-        description: 'AI handles multiple tasks simultaneously'
-      hierarchical:
-        title: Hierarchical Control
-        description: 'AI manages other AI systems in a structured hierarchy'
-      autonomous:
-        title: Autonomous Coordination
-        description: 'AI independently coordinates with other systems'
-    help_text: Consider how the AI system interacts and coordinates with other AI systems or processes
-    reasoning_prompt: Why did you choose this coordination approach?

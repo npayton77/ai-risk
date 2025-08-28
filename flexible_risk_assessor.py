@@ -33,17 +33,25 @@ class FlexibleAIRiskAssessor:
                  recommendations_file: str = 'recommendations.yaml', 
                  questions_dir: str = 'questions'):
         """Initialize with flexible YAML configuration files"""
-        
+        # Store paths for later reloads
+        self.scoring_file = scoring_file
+        self.recommendations_file = recommendations_file
+        self.questions_dir = questions_dir
+        # Initial load
+        self.reload_configs()
+
+    def reload_configs(self) -> None:
+        """Reload YAML configs to pick up admin changes without restarting the app"""
         # Load scoring configuration
-        with open(scoring_file, 'r', encoding='utf-8') as f:
+        with open(self.scoring_file, 'r', encoding='utf-8') as f:
             self.scoring_config = yaml.safe_load(f)
         
         # Load recommendations configuration
-        with open(recommendations_file, 'r', encoding='utf-8') as f:
+        with open(self.recommendations_file, 'r', encoding='utf-8') as f:
             self.recommendations_config = yaml.safe_load(f)
         
-        # Load questions configuration
-        questions_loader = QuestionsLoader(questions_dir)
+        # Load questions configuration (fresh each time)
+        questions_loader = QuestionsLoader(self.questions_dir)
         self.questions_config = questions_loader.load_all_questions()
         
         # Extract configuration data
@@ -185,6 +193,9 @@ class FlexibleAIRiskAssessor:
 
     def is_question_in_dimension(self, question_id: str, dimension: str) -> bool:
         """Check if a question belongs to a specific dimension"""
+        # Ignore reasoning fields completely
+        if question_id.endswith('_reasoning'):
+            return False
         # First check if question is explicitly configured for this dimension in scoring
         dimension_config = self.dimension_config.get(dimension, {})
         questions_config = dimension_config.get('questions', {})
