@@ -41,17 +41,20 @@ class ReportGenerator:
         }
         return dimension_titles.get(dimension, dimension.title())
 
-    def get_individual_risk_level(self, score: int) -> str:
-        """Get risk level for individual dimension score (1-4 scale)"""
-        if score == 1:
-            return "low"
-        elif score == 2:
+    def get_individual_risk_level(self, score) -> str:
+        """Map a 1-4 numeric score (int or float) to a risk level.
+        Handles fractional scores by rounding to the nearest band."""
+        try:
+            value = float(score)
+        except Exception:
             return "medium"
-        elif score == 3:
-            return "high"
-        elif score == 4:
-            return "critical"
-        return "medium"  # fallback
+        # Round to nearest 1..4 and clamp
+        rounded = int(round(value))
+        if rounded < 1:
+            rounded = 1
+        if rounded > 4:
+            rounded = 4
+        return {1: "low", 2: "medium", 3: "high", 4: "critical"}.get(rounded, "medium")
 
     def generate_comprehensive_report(self, assessment: Any) -> str:
         """Generate a comprehensive, beautiful HTML report"""
