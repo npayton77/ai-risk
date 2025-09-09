@@ -17,7 +17,7 @@ class MultiStepTemplateGenerator:
         # Define the step order and configuration
         self.steps = [
             {'key': 'basic_info', 'title': 'Assessment Information', 'subtitle': 'Basic details about your assessment'},
-            {'key': 'autonomy', 'title': 'Autonomy Level', 'subtitle': 'How much decision-making power does the AI have?'},
+            {'key': 'autonomy', 'title': 'Autonomy', 'subtitle': 'How much decision-making power does the AI have?'},
             {'key': 'oversight', 'title': 'Human Oversight', 'subtitle': 'What level of human involvement exists?'},
             {'key': 'impact', 'title': 'Output Impact', 'subtitle': 'What are the consequences of AI decisions?'},
             {'key': 'orchestration', 'title': 'Orchestration', 'subtitle': 'How are AI agents coordinated?'},
@@ -163,6 +163,12 @@ class MultiStepTemplateGenerator:
         
         # Build the complete question HTML
         question_title = question_config.get('title', question_id)
+        # Remove any leading emoji to align with enterprise tone
+        try:
+            import re
+            question_title = re.sub(r"^[\s\u2600-\u27BF\U0001F300-\U0001FAFF\U0001F1E6-\U0001F1FF]+", '', question_title).strip()
+        except Exception:
+            pass
         
         return f'''
             <div class="question-container" data-question="{question_id}">
@@ -300,6 +306,7 @@ class MultiStepTemplateGenerator:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{step_config['title']} - AI Risk Assessment</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.ico">
+    <link rel="stylesheet" href="/static/style.css">
     <style>
         {self._get_step_styles()}
     </style>
@@ -345,7 +352,7 @@ class MultiStepTemplateGenerator:
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            zoom: 0.75;
+            zoom: 0.9;
             transform-origin: top left;
         }
         

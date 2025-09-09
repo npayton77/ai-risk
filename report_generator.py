@@ -185,6 +185,7 @@ class ReportGenerator:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Risk Assessment Report - {assessment.workflow_name}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.ico">
+    <link rel="stylesheet" href="/static/style.css">
     <style>
         * {{
             margin: 0;
@@ -198,7 +199,7 @@ class ReportGenerator:
             color: #2c3e50;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            zoom: 0.75;
+            zoom: 0.9;
             transform-origin: top left;
         }}
         

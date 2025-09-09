@@ -39,6 +39,10 @@ class AdminInterface:
         self.bp.route('/scoring', methods=['GET', 'POST'])(self.scoring_editor)
         self.bp.route('/validate', methods=['GET'])(self.validate_config)
         self.bp.route('/api/questions/<dimension>', methods=['GET'])(self.api_get_dimension_questions)
+        # Backups management
+        self.bp.route('/backups', methods=['GET'])(self.backups_page)
+        self.bp.route('/backups/purge', methods=['POST'])(self.backups_purge)
+        self.bp.route('/backups/delete', methods=['POST'])(self.backups_delete)
     
     def load_yaml_file(self, file_path: Path) -> Dict[str, Any]:
         """Load a YAML file safely"""
@@ -81,8 +85,11 @@ class AdminInterface:
             return False
         try:
             # Backup current file if present
+            backup_dir = Path(os.getenv('BACKUP_DIR', 'backups'))
+            backup_dir.mkdir(parents=True, exist_ok=True)
             if file_path.exists():
-                backup = file_path.with_suffix(file_path.suffix + f".bak.{int(time.time())}")
+                backup_name = f"{file_path.name}.bak.{int(time.time())}"
+                backup = backup_dir / backup_name
                 try:
                     with open(file_path, 'r', encoding='utf-8') as src, open(backup, 'w', encoding='utf-8') as dst:
                         dst.write(src.read())
@@ -90,12 +97,33 @@ class AdminInterface:
                     pass
             yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False, indent=2)
             self._atomic_write(file_path, yaml_str)
+            # Retention policy
+            try:
+                max_keep = int(os.getenv('BACKUP_MAX_PER_FILE', '5'))
+            except Exception:
+                max_keep = 5
+            try:
+                self._prune_backups_for(file_path.name, max_keep, backup_dir)
+            except Exception:
+                pass
             return True
         except Exception as e:
             flash(f"Error saving {file_path}: {e}", 'error')
             return False
         finally:
             self._release_lock(lock)
+
+    def _prune_backups_for(self, base_filename: str, max_keep: int, backup_dir: Path) -> None:
+        pattern = f"{base_filename}.bak."
+        candidates = sorted([
+            p for p in backup_dir.glob(f"{base_filename}.bak.*")
+            if p.is_file()
+        ], key=lambda p: p.stat().st_mtime, reverse=True)
+        for old in candidates[max_keep:]:
+            try:
+                old.unlink()
+            except Exception:
+                pass
     
     def get_all_questions(self) -> Dict[str, Dict[str, Any]]:
         """Get all questions organized by dimension"""
@@ -1628,6 +1656,106 @@ class AdminInterface:
             warnings=warnings,
             dim_count=len(dimensions_cfg)
         )
+
+    def backups_page(self):
+        """List backups and provide purge/delete controls"""
+        backup_dir = Path(os.getenv('BACKUP_DIR', 'backups'))
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        files = []
+        for p in sorted(backup_dir.glob('*.bak.*'), key=lambda x: x.stat().st_mtime, reverse=True):
+            try:
+                files.append({
+                    'name': p.name,
+                    'size': p.stat().st_size,
+                    'mtime': datetime.fromtimestamp(p.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                })
+            except Exception:
+                continue
+
+        template = """
+<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+  <meta charset=\"UTF-8\">
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+  <title>Backups</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f6f7fb; padding: 20px; zoom: 0.75; transform-origin: top left; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+    .actions { display: flex; gap: 10px; }
+    .btn { padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-secondary { background: #f8f9fa; color: #333; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <div class=\"container\">
+    <div class=\"card\">
+      <h1>Backups</h1>
+      <form method=\"POST\" action=\"{{ url_for('admin.backups_purge') }}\" style=\"margin: 10px 0;\">
+        <input type=\"hidden\" name=\"csrf_token\" value=\"{{ session.get('csrf_token','') }}\">
+        <button class=\"btn btn-danger\" onclick=\"return confirm('Purge old backups?')\">Purge Old Backups</button>
+        <a href=\"{{ url_for('admin.dashboard') }}\" class=\"btn btn-secondary\">Back</a>
+      </form>
+      <table>
+        <thead><tr><th>File</th><th>Size</th><th>Date</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for f in files %}
+            <tr>
+              <td>{{ f.name }}</td>
+              <td>{{ '%.1f KB' % (f.size/1024) }}</td>
+              <td>{{ f.mtime }}</td>
+              <td>
+                <form method=\"POST\" action=\"{{ url_for('admin.backups_delete') }}\" style=\"display:inline;\" onsubmit=\"return confirm('Delete backup?')\">
+                  <input type=\"hidden\" name=\"csrf_token\" value=\"{{ session.get('csrf_token','') }}\">
+                  <input type=\"hidden\" name=\"name\" value=\"{{ f.name }}\">
+                  <button class=\"btn btn-danger\">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
+        """
+
+        return render_template_string(template, files=files)
+
+    def backups_purge(self):
+        if session.get('csrf_token') != request.form.get('csrf_token'):
+            flash('Invalid CSRF token', 'error')
+            return redirect(url_for('admin.backups_page'))
+        backup_dir = Path(os.getenv('BACKUP_DIR', 'backups'))
+        max_keep = int(os.getenv('BACKUP_MAX_PER_FILE', '5'))
+        for base in ['scoring_flexible.yaml'] + [f.name for f in (self.questions_dir.glob('*.yaml'))]:
+            try:
+                self._prune_backups_for(base, max_keep, backup_dir)
+            except Exception:
+                continue
+        flash('Old backups purged', 'success')
+        return redirect(url_for('admin.backups_page'))
+
+    def backups_delete(self):
+        if session.get('csrf_token') != request.form.get('csrf_token'):
+            flash('Invalid CSRF token', 'error')
+            return redirect(url_for('admin.backups_page'))
+        name = request.form.get('name')
+        if not name:
+            return redirect(url_for('admin.backups_page'))
+        target = Path(os.getenv('BACKUP_DIR', 'backups')) / name
+        if target.exists():
+            try:
+                target.unlink()
+                flash(f'Deleted {name}', 'success')
+            except Exception as e:
+                flash(f'Error deleting {name}: {e}', 'error')
+        return redirect(url_for('admin.backups_page'))
     
     def api_get_dimension_questions(self, dimension: str):
         """API endpoint to get questions for a dimension"""
