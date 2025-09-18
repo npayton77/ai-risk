@@ -634,10 +634,10 @@ class AdminInterface:
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            zoom: 0.75;
+            zoom: 1.0;
             transform-origin: top left;
         }
-        .container { max-width: 800px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
         .form-card {
             background: white;
             padding: 40px;
@@ -699,7 +699,7 @@ class AdminInterface:
         }
         .option-row {
             display: grid;
-            grid-template-columns: 1fr 2fr 1fr auto;
+            grid-template-columns: 1fr 2fr 2fr 1fr auto;
             gap: 15px;
             align-items: end;
             margin-bottom: 15px;
@@ -1310,6 +1310,11 @@ class AdminInterface:
                                 <label class="form-label">Option Title *</label>
                                 <input type="text" name="option_titles[]" class="form-control" 
                                        value="{{ option_data.title }}" required>
+                            </div>
+                            <div>
+                                <label class="form-label">Option Description</label>
+                                <input type="text" name="option_descriptions[]" class="form-control" 
+                                       value="{{ option_data.get('description','') }}" placeholder="Optional">
                             </div>
                             <div>
                                 <label class="form-label">Risk Score (1-4) *</label>
