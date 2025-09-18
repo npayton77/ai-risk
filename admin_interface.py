@@ -1116,10 +1116,10 @@ class AdminInterface:
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            zoom: 0.75;
+            zoom: 1.0;
             transform-origin: top left;
         }
-        .container { max-width: 800px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
         .form-card {
             background: white;
             padding: 40px;
@@ -1181,15 +1181,17 @@ class AdminInterface:
         }
         .option-row {
             display: grid;
-            grid-template-columns: 1fr 2fr 1fr auto;
-            gap: 15px;
-            align-items: end;
-            margin-bottom: 15px;
-            padding: 15px;
+            grid-template-columns: 1fr 1fr 120px auto;
+            gap: 16px;
+            align-items: start;
+            margin-bottom: 18px;
+            padding: 18px;
             background: #f8f9fa;
-            border-radius: 8px;
+            border-radius: 10px;
         }
         .option-row:last-child { margin-bottom: 0; }
+        .option-actions { display: flex; align-items: end; }
+        .option-desc { grid-column: 1 / -1; }
         
         .btn {
             padding: 12px 24px;
@@ -1312,17 +1314,16 @@ class AdminInterface:
                                        value="{{ option_data.title }}" required>
                             </div>
                             <div>
-                                <label class="form-label">Option Description</label>
-                                <input type="text" name="option_descriptions[]" class="form-control" 
-                                       value="{{ option_data.get('description','') }}" placeholder="Optional">
-                            </div>
-                            <div>
                                 <label class="form-label">Risk Score (1-4) *</label>
                                 <input type="number" name="option_scores[]" class="form-control" min="1" max="4" 
                                        value="{{ scoring_data.get('scoring', {}).get(option_key, 1) }}" required>
                             </div>
-                            <div>
+                            <div class="option-actions">
                                 <button type="button" class="btn btn-danger" onclick="removeOption(this)">Remove</button>
+                            </div>
+                            <div class="option-desc">
+                                <label class="form-label">Option Description</label>
+                                <textarea name="option_descriptions[]" class="form-control" rows="2" placeholder="Optional">{{ option_data.get('description','') }}</textarea>
                             </div>
                         </div>
                         {% endfor %}
